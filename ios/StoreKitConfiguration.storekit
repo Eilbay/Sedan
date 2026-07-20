@@ -1,0 +1,183 @@
+{
+  "identifier" : "StoreKitConfiguration",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "500",
+      "familyShareable" : false,
+      "internalID" : "wallet_500_id",
+      "localizations" : [
+        {
+          "description" : "Пополнение рекламного баланса на 500 сом",
+          "displayName" : "Пополнение 500 сом",
+          "locale" : "ru"
+        },
+        {
+          "description" : "Top up advertising balance by 500 som",
+          "displayName" : "Top Up 500 som",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "ad_wallet_500",
+      "referenceName" : "Wallet 500",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "1000",
+      "familyShareable" : false,
+      "internalID" : "wallet_1000_id",
+      "localizations" : [
+        {
+          "description" : "Пополнение рекламного баланса на 1000 сом",
+          "displayName" : "Пополнение 1000 сом",
+          "locale" : "ru"
+        },
+        {
+          "description" : "Top up advertising balance by 1000 som",
+          "displayName" : "Top Up 1000 som",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "ad_wallet_1000",
+      "referenceName" : "Wallet 1000",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "2000",
+      "familyShareable" : false,
+      "internalID" : "wallet_2000_id",
+      "localizations" : [
+        {
+          "description" : "Пополнение рекламного баланса на 2000 сом",
+          "displayName" : "Пополнение 2000 сом",
+          "locale" : "ru"
+        },
+        {
+          "description" : "Top up advertising balance by 2000 som",
+          "displayName" : "Top Up 2000 som",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "ad_wallet_2000",
+      "referenceName" : "Wallet 2000",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "5000",
+      "familyShareable" : false,
+      "internalID" : "wallet_5000_id",
+      "localizations" : [
+        {
+          "description" : "Пополнение рекламного баланса на 5000 сом",
+          "displayName" : "Пополнение 5000 сом",
+          "locale" : "ru"
+        },
+        {
+          "description" : "Top up advertising balance by 5000 som",
+          "displayName" : "Top Up 5000 som",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "ad_wallet_5000",
+      "referenceName" : "Wallet 5000",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6748244443",
+    "_developerTeamID" : "JU2G2JWMUR",
+    "_failTransactionsEnabled" : false,
+    "_locale" : "ru",
+    "_storefront" : "KGZ",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "business_premium",
+      "localizations" : [
+
+      ],
+      "name" : "Business Premium",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "11.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "business_weekly_id",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Еженедельная бизнес-подписка",
+              "displayName" : "Бизнес Еженедельно",
+              "locale" : "ru"
+            },
+            {
+              "description" : "Weekly business subscription",
+              "displayName" : "Business Weekly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "business_weekly",
+          "recurringSubscriptionPeriod" : "P1W",
+          "referenceName" : "Business Weekly",
+          "subscriptionGroupID" : "business_premium",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "39.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "business_monthly_id",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Ежемесячная бизнес-подписка",
+              "displayName" : "Бизнес Ежемесячно",
+              "locale" : "ru"
+            },
+            {
+              "description" : "Monthly business subscription",
+              "displayName" : "Business Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "business_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Business Monthly",
+          "subscriptionGroupID" : "business_premium",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "291812609091",
+    "firebase_url": "https://elba-d9541-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "elba-d9541",
+    "storage_bucket": "elba-d9541.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:291812609091:android:d879bc17a329528b2958f6",
+        "android_client_info": {
+          "package_name": "b2b.optombai.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBN3bRlOJOm_CFaYa5cVKT0Qlug3cWOaKs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:291812609091:android:6c9f69493455ccc42958f6",
+        "android_client_info": {
+          "package_name": "kg.eilbay.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBN3bRlOJOm_CFaYa5cVKT0Qlug3cWOaKs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
