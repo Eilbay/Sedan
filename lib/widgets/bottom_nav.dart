@@ -560,7 +560,7 @@ class _BottomNavState extends State<BottomNav>
           }
           // Push on top of the current route — preserves the back stack so
           // the user can return to whatever screen they were on.
-          context.router.push(const NotificationsRoute());
+          context.router.push(const ChatListRoute());
         },
       );
     }
@@ -597,7 +597,7 @@ class _BottomNavState extends State<BottomNav>
                 return;
               }
               setState(() => _overlayRouteOpen = true);
-              await context.router.push(const NotificationsRoute());
+              await context.router.push(const ChatListRoute());
               if (mounted) {
                 setState(() => _overlayRouteOpen = false);
               }

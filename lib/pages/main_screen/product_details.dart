@@ -3,26 +3,19 @@ import 'package:card_swiper/card_swiper.dart';
 import 'package:easy_image_viewer/easy_image_viewer.dart';
 import 'package:optombai/core/import_links.dart';
 import 'package:optombai/data/models/region/kg_region.dart';
-import 'package:optombai/utils/extensions/iso_date_extension.dart';
 import 'package:optombai/bloc/block_bloc/block_bloc.dart';
-import 'package:optombai/utils/extensions/string_validation_extension.dart';
 import 'package:optombai/utils/extensions/video_url_extension.dart';
 import 'package:optombai/pages/profile/edit/widgets/video_view_screen.dart';
 import 'package:optombai/widgets/bottom_nav.dart';
 import 'package:optombai/widgets/moderation/user_actions_sheet.dart';
 import 'package:optombai/data/models/report/report_target_type.dart';
+import 'package:optombai/data/models/account/user/socials/social_owner.dart';
 import 'package:optombai/app/router/app_router.dart';
 import 'package:optombai/widgets/translation/text_translated.dart';
 import 'package:optombai/core/di/injection.dart';
 import 'package:optombai/features/promotion/domain/repository/promotion_repository.dart';
-import 'package:optombai/widgets/product/dual_price_text.dart';
 import 'package:optombai/widgets/shimmer/shimmer_product_card.dart';
 import 'package:auto_route/auto_route.dart';
-import 'package:optombai/bloc/chat_bloc/chat_bloc.dart';
-import 'package:optombai/data/models/chat/linked_post.dart';
-import 'package:optombai/bloc/message_bloc/message_bloc.dart';
-import 'package:optombai/bloc/language_bloc/extensions/translation_context_extension.dart';
-import 'package:optombai/core/appColors.dart';
 
 @RoutePage(name: 'ProductDetailsRoute')
 class ProductDetails extends StatefulWidget {
@@ -39,8 +32,6 @@ class ProductDetails extends StatefulWidget {
   final int? chooseMainType;
   final bool? isRegistered;
 
-  /// Optional comment/review id to scroll to (best-effort) when opened from a
-  /// "new comment" notification.
   final String? commentId;
 
   @override
@@ -51,29 +42,13 @@ class _ProductDetailsState extends State<ProductDetails> {
   late Product product;
 
   final _fromKey = GlobalKey<FormState>();
-  final TextEditingController _sellerMessageController =
-      TextEditingController();
   final ScrollController _detailsScrollController = ScrollController();
   final GlobalKey _similarProductsKey = GlobalKey();
-
-  bool _isSellerQuickBarVisible = true;
-
-  static const List<String> _quickSellerMessages = [
-    'Здравствуйте! Ещё актуально?',
-    'Здравствуйте! Я заинтересован!',
-    'Здравствуйте! Есть ли доставка?',
-    'Здравствуйте! За сколько отдадите?',
-  ];
 
   @override
   void initState() {
     super.initState();
     product = widget.results;
-
-    _detailsScrollController.addListener(_updateSellerQuickBarVisibility);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _updateSellerQuickBarVisibility();
-    });
 
     context.read<ProductBloc>().add(GetProductInfo(widget.results.id));
     context.read<ReviewBloc>().add(AllReviewsEvent(widget.results.id));
@@ -84,34 +59,8 @@ class _ProductDetailsState extends State<ProductDetails> {
 
   @override
   void dispose() {
-    _detailsScrollController.removeListener(_updateSellerQuickBarVisibility);
     _detailsScrollController.dispose();
-    _sellerMessageController.dispose();
     super.dispose();
-  }
-
-  void _updateSellerQuickBarVisibility() {
-    if (!mounted) return;
-
-    final similarContext = _similarProductsKey.currentContext;
-    if (similarContext == null) {
-      if (!_isSellerQuickBarVisible) {
-        setState(() => _isSellerQuickBarVisible = true);
-      }
-      return;
-    }
-
-    final renderBox = similarContext.findRenderObject() as RenderBox?;
-    if (renderBox == null || !renderBox.hasSize) return;
-
-    final top = renderBox.localToGlobal(Offset.zero).dy;
-    final screenHeight = MediaQuery.sizeOf(context).height;
-    final hideTriggerY = screenHeight / 2.5;
-
-    final shouldShow = top > hideTriggerY;
-    if (shouldShow != _isSellerQuickBarVisible) {
-      setState(() => _isSellerQuickBarVisible = shouldShow);
-    }
   }
 
   Future<void> _recordImpressionIfNeeded() async {
@@ -136,103 +85,6 @@ class _ProductDetailsState extends State<ProductDetails> {
     }
   }
 
-  int? choseMain = 2;
-
-  Future<void> _sendMessageToSeller(String rawText) async {
-    final text = rawText.trim();
-    if (text.isEmpty) return;
-
-    // `isAgree` is stale on most legacy accounts — gating sends valid
-    // logged-in users to the auth screen for no reason. Auth check now
-    // relies solely on the registration flag.
-    final bool isRegister = context.read<ThemeNotifier>().isRegister;
-
-    if (!isRegister) {
-      if (!mounted) return;
-      debugPrint('[AUTH] product details gate -> sign in');
-      context.router.push(const SignInRoute());
-      return;
-    }
-
-    final targetUserId = widget.results.owner?.id;
-    final currentUserId = context.read<UserBloc>().state.user.id;
-
-    // Guard against missing or malformed ids. Backend `POST /chat/start/`
-    // rejects non-UUID `user_id` with a 400 "Must be a valid UUID." that
-    // would otherwise surface to the user as a confusing raw error.
-    if (targetUserId == null || !targetUserId.isValidUuid) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Не удалось определить продавца')),
-      );
-      return;
-    }
-
-    if (targetUserId == currentUserId) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Нельзя отправить сообщение самому себе')),
-      );
-      return;
-    }
-
-    final chatBloc = context.read<ChatBloc>();
-    chatBloc.add(
-      CreatePersonalChatEvent(targetUserId, productId: widget.results.id),
-    );
-
-    try {
-      final chatState = await chatBloc.stream.firstWhere((s) {
-        final hasChatForUser = s.chats.any(
-          (c) => c.participants.any((p) => p.id == targetUserId),
-        );
-        return !s.isLoading && (hasChatForUser || s.errors.isNotEmpty);
-      }).timeout(const Duration(seconds: 12));
-
-      if (!mounted) return;
-
-      if (chatState.errors.isNotEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(chatState.errors.join(', '))),
-        );
-        return;
-      }
-
-      final chat = chatState.chats.firstWhere(
-        (c) => c.participants.any((p) => p.id == targetUserId),
-        orElse: () => chatState.chats.first,
-      );
-
-      context.read<MessageBloc>().add(
-            SendMessageEvent(
-              chatId: chat.id,
-              text: text,
-            ),
-          );
-
-      _sellerMessageController.clear();
-
-      final linkedPost = LinkedPost(
-        id: widget.results.id,
-        title: widget.results.name,
-        imageUrl: widget.results.image_post.isNotEmpty
-            ? widget.results.image_post.first.image
-            : null,
-        price: widget.results.price,
-        currency: widget.results.currency,
-      );
-
-      context.router.push(
-        ChatConversationRoute(chat: chat, linkedPost: linkedPost),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Не удалось отправить сообщение')),
-      );
-    }
-  }
-
   FavoriteResult? isLike(List<FavoriteResult> list, String prodId) {
     for (var element in list) {
       if (element.post.id == prodId) {
@@ -246,9 +98,6 @@ class _ProductDetailsState extends State<ProductDetails> {
   Widget build(BuildContext context) {
     final bool stateSwitch = context.select((ThemeNotifier n) => n.isDarkMode);
     final bool isRegister = context.select((ThemeNotifier n) => n.isRegister);
-    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-    final isKeyboardOpen = keyboardInset > 0;
-    final showSellerQuickBar = _isSellerQuickBarVisible || isKeyboardOpen;
     final String displayTitle = widget.results.name.length > 18
         ? '${widget.results.name.substring(0, 18)}.'
         : widget.results.name;
@@ -259,8 +108,6 @@ class _ProductDetailsState extends State<ProductDetails> {
         productOwnerId == context.read<UserBloc>().state.user.id;
 
     return BlocListener<BlockBloc, BlockState>(
-        // When this product's author gets blocked, leave the detail screen and
-        // return to the feed — which refetches without the blocked author.
         listenWhen: (prev, curr) =>
             productOwnerId.isNotEmpty &&
             prev.justBlockedUserId != curr.justBlockedUserId &&
@@ -269,21 +116,8 @@ class _ProductDetailsState extends State<ProductDetails> {
         child: Form(
           key: _fromKey,
           child: CustomScaffold(
-            bottomNavigationBar: showSellerQuickBar
-                ? Padding(
-                    padding: EdgeInsets.only(
-                      bottom: MediaQuery.viewInsetsOf(context).bottom,
-                    ),
-                    child: SafeArea(
-                      top: false,
-                      child: _SellerQuickChatBar(
-                        controller: _sellerMessageController,
-                        quickMessages: _quickSellerMessages,
-                        onSend: _sendMessageToSeller,
-                      ),
-                    ),
-                  )
-                : const BottomNav(currentIndexOverride: -1, passive: true),
+            bottomNavigationBar:
+                const BottomNav(currentIndexOverride: -1, passive: true),
             title: displayTitle,
             action: (!isRegister || isOwnProduct || productOwnerId.isEmpty)
                 ? null
@@ -324,10 +158,6 @@ class _ProductDetailsState extends State<ProductDetails> {
                     final realDataReady =
                         p.id == widget.results.id && p.name.isNotEmpty;
 
-                    // Show shimmer only when we have no displayable data yet:
-                    // - normal nav: widget.results already has full data, never shimmer
-                    // - chat nav (stub): shimmer until GetProductInfo returns
-                    // Do NOT shimmer for SameProduct loading (it reuses isLoading flag)
                     final hasData =
                         widget.results.name.isNotEmpty || realDataReady;
                     if (!hasData) {
@@ -355,7 +185,6 @@ class _ProductDetailsState extends State<ProductDetails> {
 
                     final categoryId = p.category;
                     final categoryName = p.categories?.name ?? "—";
-                    // Use freshly loaded product from bloc when available
                     final r = (p.id == widget.results.id && p.name.isNotEmpty)
                         ? p
                         : widget.results;
@@ -366,51 +195,48 @@ class _ProductDetailsState extends State<ProductDetails> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SizedBox(height: 16.h),
-                            _ProductTitleRow(name: r.name),
-                            SizedBox(height: 8.h),
-                            _ProductStatsRow(
-                              views: fresh.views,
-                              createdAt: r.createdAt,
-                              isDarkMode: stateSwitch,
-                            ),
-                            SizedBox(height: 8.h),
-                            _ProductMetaRow(
-                              rating: fresh.rating,
-                              reviewCount: fresh.reviewCount,
-                              productNumber: r.productNumber,
-                              isDarkMode: stateSwitch,
-                            ),
-                            SizedBox(height: 15.h),
-                            _OwnerInfoRow(
-                              owner: r.owner,
-                              chooseMainType: widget.chooseMainType,
-                              isRegistered: widget.isRegistered,
-                              isDarkMode: stateSwitch,
-                            ),
-                            SizedBox(height: 15.h),
+                            SizedBox(height: 14.h),
                             _ImageCarousel(
                               imagePosts: r.image_post,
                               product: r,
                               isRegister: isRegister,
                               isLike: isLike,
                             ),
-                            SizedBox(height: 30.h),
-                            _PriceSection(
-                              owner: r.owner,
+                            SizedBox(height: 14.h),
+                            _PriceViewsRow(
                               price: r.price,
                               currency: r.currency,
+                              views: fresh.views,
+                              isDarkMode: stateSwitch,
+                            ),
+                            SizedBox(height: 14.h),
+                            _ProductTitleRow(name: r.name),
+                            SizedBox(height: 14.h),
+                            _OwnerCardRow(
+                              owner: r.owner,
                               chooseMainType: widget.chooseMainType,
                               isRegistered: widget.isRegistered,
+                              isDarkMode: stateSwitch,
                             ),
-                            SizedBox(height: 30.h),
+                            SizedBox(height: 18.h),
+                            _DescriptionBlock(description: r.description),
+                            SizedBox(height: 16.h),
+                            _ContactButtonsRow(
+                              owner: r.owner,
+                              isDarkMode: stateSwitch,
+                            ),
+                            SizedBox(height: 22.h),
+                            _FinancingSection(
+                              carPrice: r.price ?? 0,
+                              currency: r.currency,
+                              isDarkMode: stateSwitch,
+                            ),
+                            SizedBox(height: 22.h),
                             _AboutProductSection(
                               name: r.name,
-                              description: r.description,
                               regionId: r.regionId,
                               owner: r.owner,
                             ),
-                            SizedBox(height: 9.h),
                             SizedBox(height: 12.h),
                             Divider(
                               height: 0.15.h,
@@ -454,135 +280,70 @@ class _ProductDetailsState extends State<ProductDetails> {
   }
 }
 
-class _SellerQuickChatBar extends StatelessWidget {
-  final TextEditingController controller;
-  final List<String> quickMessages;
-  final ValueChanged<String> onSend;
+class _PriceViewsRow extends StatelessWidget {
+  final double? price;
+  final String currency;
+  final int views;
+  final bool isDarkMode;
 
-  const _SellerQuickChatBar({
-    required this.controller,
-    required this.quickMessages,
-    required this.onSend,
+  const _PriceViewsRow({
+    required this.price,
+    required this.currency,
+    required this.views,
+    required this.isDarkMode,
   });
+
+  static const Color _accent = Color(0xFF2F80ED);
+
+  static String _formatNum(num v) {
+    final s = v.round().toString();
+    final buf = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write(' ');
+      buf.write(s[i]);
+    }
+    return buf.toString();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = context.select((ThemeNotifier n) => n.isDarkMode);
+    final currencyLabel = switch (currency.toUpperCase()) {
+      'KGS' => 'сом',
+      'USD' => '\$',
+      _ => currency,
+    };
 
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.fromLTRB(8.w, 4.h, 8.w, 4.h),
-      color: isDarkMode ? const Color(0xFF1A1A1A) : AppColors.white,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            height: 30.h,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: quickMessages.length,
-              separatorBuilder: (_, __) => SizedBox(width: 5.w),
-              itemBuilder: (context, index) {
-                final text = quickMessages[index];
-                return InkWell(
-                  onTap: () async {
-                    final translated = await context.translateText(text);
-                    onSend(translated);
-                  },
-                  borderRadius: BorderRadius.circular(18),
-                  child: Container(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
-                    decoration: BoxDecoration(
-                      color: const Color(0xff22E07B),
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: Center(
-                      child: TextTranslated(
-                        text,
-                        style: TextStyle(
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
+    final hasPrice = price != null && price != 0;
+    final priceText =
+        hasPrice ? '${_formatNum(price!)} $currencyLabel' : 'Договорная';
+
+    final Color sub = isDarkMode ? Colors.white70 : const Color(0xFF5F5F5F);
+
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: _accent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            priceText,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
             ),
           ),
-          SizedBox(height: 5.h),
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  height: 36.h,
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? const Color(0xff2d3348) : Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: isDarkMode
-                          ? const Color(0xff49506b)
-                          : const Color(0xffd4d8e5),
-                    ),
-                  ),
-                  child: TextField(
-                    controller: controller,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: onSend,
-                    decoration: InputDecoration(
-                      border: InputBorder.none,
-                      hint: TextTranslated(
-                        'Спросить продавца',
-                        style: TextStyle(fontSize: 11.sp),
-                      ),
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 12.w,
-                        vertical: 7.h,
-                      ),
-                    ),
-                    style: TextStyle(fontSize: 12.sp),
-                  ),
-                ),
-              ),
-              SizedBox(width: 7.w),
-              BlocBuilder<MessageBloc, MessageState>(
-                buildWhen: (prev, curr) => prev.isSending != curr.isSending,
-                builder: (context, state) {
-                  return InkWell(
-                    onTap:
-                        state.isSending ? null : () => onSend(controller.text),
-                    borderRadius: BorderRadius.circular(18),
-                    child: Container(
-                      width: 36.w,
-                      height: 36.h,
-                      decoration: const BoxDecoration(
-                        color: Color(0xff8C93A9),
-                        shape: BoxShape.circle,
-                      ),
-                      child: state.isSending
-                          ? Padding(
-                              padding: EdgeInsets.all(9.w),
-                              child: const CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            )
-                          : Icon(
-                              Icons.arrow_upward,
-                              color: Colors.white,
-                              size: 18.sp,
-                            ),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        ],
-      ),
+        ),
+        const Spacer(),
+        Icon(Icons.remove_red_eye_outlined, size: 18, color: sub),
+        const SizedBox(width: 5),
+        Text(
+          _formatNum(views),
+          style: TextStyle(fontSize: 14, color: sub),
+        ),
+      ],
     );
   }
 }
@@ -595,14 +356,13 @@ class _ProductTitleRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Flexible(
           child: TextTranslated(
             name,
             softWrap: true,
             style: const TextStyle(
-              fontSize: 16,
+              fontSize: 20,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -612,196 +372,20 @@ class _ProductTitleRow extends StatelessWidget {
   }
 }
 
-class _ProductStatsRow extends StatelessWidget {
-  final int views;
-  final DateTime createdAt;
-  final bool isDarkMode;
-
-  const _ProductStatsRow({
-    required this.views,
-    required this.createdAt,
-    required this.isDarkMode,
-  });
-
-  static const List<String> _months = [
-    'Января',
-    'Февраля',
-    'Марта',
-    'Апреля',
-    'Мая',
-    'Июня',
-    'Июля',
-    'Августа',
-    'Сентября',
-    'Октября',
-    'Ноября',
-    'Декабря',
-  ];
-
-  String get _formattedDate {
-    final relative = createdAt.asRecentRelativeTime;
-    if (relative != null) return relative;
-    final month = _months[createdAt.month - 1];
-    return '${createdAt.day} $month ${createdAt.year}';
-  }
-
-  String get _formattedViews {
-    final text = views.toString();
-    final buffer = StringBuffer();
-    for (var i = 0; i < text.length; i++) {
-      final remaining = text.length - i;
-      buffer.write(text[i]);
-      if (remaining > 1 && remaining % 3 == 1) {
-        buffer.write(' ');
-      }
-    }
-    return buffer.toString();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final subtextColor = isDarkMode ? Colors.white : const Color(0xff5F5F5F);
-
-    return Wrap(
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 8.w,
-      runSpacing: 4.h,
-      children: [
-        _ProductStatsItem(
-          icon: Icons.remove_red_eye_outlined,
-          text: '$_formattedViews просмотров',
-          color: subtextColor,
-        ),
-        Text(
-          '•',
-          style: TextStyle(
-            fontSize: 12,
-            color: subtextColor,
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-        _ProductStatsItem(
-          icon: Icons.calendar_month_outlined,
-          text: 'Добавлено $_formattedDate',
-          color: subtextColor,
-        ),
-        Text(
-          '•',
-          style: TextStyle(
-            fontSize: 12,
-            color: subtextColor,
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ProductStatsItem extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  final Color color;
-
-  const _ProductStatsItem({
-    required this.icon,
-    required this.text,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          icon,
-          size: 16.sp,
-          color: color,
-        ),
-        SizedBox(width: 4.w),
-        TextTranslated(
-          text,
-          style: TextStyle(
-            fontWeight: FontWeight.w400,
-            fontSize: 12,
-            color: color,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ProductMetaRow extends StatelessWidget {
-  final double rating;
-  final int reviewCount;
-  final int? productNumber;
-  final bool isDarkMode;
-
-  const _ProductMetaRow({
-    required this.rating,
-    required this.reviewCount,
-    required this.productNumber,
-    required this.isDarkMode,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final subtextColor = isDarkMode ? Colors.white : const Color(0xff5F5F5F);
-
-    // Hide stars row entirely at rating=0 — 5 empty outlined stars
-    // look like a rendering bug. Show only the textual label.
-    return Row(
-      children: [
-        if (rating > 0) ...[
-          Stars(rating: rating),
-          SizedBox(width: 15.w),
-        ],
-        TextTranslated(
-          reviewCount == 0 ? "нет отзывов" : "$reviewCount отзывов",
-          style: TextStyle(
-            fontWeight: FontWeight.w400,
-            fontSize: 12,
-            color: subtextColor,
-          ),
-        ),
-        SizedBox(width: 16.w),
-        TextTranslated(
-          "Арт: ",
-          style: TextStyle(
-            fontSize: 12,
-            color: subtextColor,
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-        TextTranslated(
-          productNumber.toString(),
-          style: const TextStyle(
-            fontSize: 12,
-            color: activeColor,
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _OwnerInfoRow extends StatelessWidget {
+class _OwnerCardRow extends StatelessWidget {
   final User? owner;
   final int? chooseMainType;
   final bool? isRegistered;
   final bool isDarkMode;
 
-  const _OwnerInfoRow({
+  const _OwnerCardRow({
     required this.owner,
     required this.chooseMainType,
     required this.isRegistered,
     required this.isDarkMode,
   });
 
-  void _navigateToOwnerProfile(BuildContext context) {
+  void _openOwner(BuildContext context) {
     context.router.push(OtherUserProfileRoute(
       username: owner?.username ?? "",
       user: owner?.id ?? "",
@@ -812,26 +396,34 @@ class _OwnerInfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        InkWell(
-          onTap: () => _navigateToOwnerProfile(context),
-          child: SizedBox(
-            width: 40.w,
-            height: 40.h,
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  width: 2.w,
-                  color: Colors.transparent,
-                ),
-                gradient: const LinearGradient(
-                  colors: [Colors.red, Colors.purple],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
+    final Color cardColor = isDarkMode ? const Color(0xFF14181F) : Colors.white;
+    final Color borderColor =
+        (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.06);
+
+    return InkWell(
+      onTap: () => _openOwner(context),
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: borderColor),
+          boxShadow: isDarkMode
+              ? null
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 44.w,
+              height: 44.w,
               child: CircleAvatar(
                 backgroundColor: const Color(0xffF0F0F0),
                 backgroundImage: owner?.image != null
@@ -839,10 +431,10 @@ class _OwnerInfoRow extends StatelessWidget {
                     : null,
                 child: owner?.image == null
                     ? CustomAvatar(
-                        width: 50.w,
-                        height: 50.h,
-                        sizeAvatar: 25,
-                        size: 30,
+                        width: 44.w,
+                        height: 44.h,
+                        sizeAvatar: 22,
+                        size: 24,
                         colorContainer:
                             isDarkMode ? Colors.white10 : Colors.black12,
                         colorContainerBorder: Colors.black12,
@@ -851,40 +443,220 @@ class _OwnerInfoRow extends StatelessWidget {
                     : null,
               ),
             ),
-          ),
-        ),
-        SizedBox(width: 6.w),
-        Flexible(
-          child: InkWell(
-            onTap: () => _navigateToOwnerProfile(context),
-            child: TextTranslated(
-              owner?.username ?? "",
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 18,
+            SizedBox(width: 12.w),
+            Expanded(
+              child: Row(
+                children: [
+                  Flexible(
+                    child: TextTranslated(
+                      owner?.username ?? "",
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 17,
+                      ),
+                    ),
+                  ),
+                  if (owner?.is_verified ?? false) ...[
+                    SizedBox(width: 5.w),
+                    const Icon(
+                      Icons.verified,
+                      color: Color(0xFF2F80ED),
+                      size: 18,
+                    ),
+                  ],
+                ],
               ),
             ),
-          ),
+            SizedBox(width: 8.w),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 26,
+              color: isDarkMode ? Colors.white54 : Colors.black38,
+            ),
+          ],
         ),
-        SizedBox(width: 5.w),
-        if (owner?.is_verified ?? false)
-          const Icon(
-            Icons.verified,
-            color: Colors.green,
-          ),
-        SizedBox(width: 15.w),
+      ),
+    );
+  }
+}
+
+class _DescriptionBlock extends StatelessWidget {
+  final String description;
+
+  const _DescriptionBlock({required this.description});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const TextTranslated(
+          "Описание",
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        ),
+        SizedBox(height: 8.h),
         TextTranslated(
-          "Рейтинг : ${owner?.rating ?? 0}",
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Colors.grey,
+          description,
+          textAlign: TextAlign.start,
+          style: const TextStyle(fontSize: 14, height: 1.4),
+        ),
+      ],
+    );
+  }
+}
+
+class _ContactButtonsRow extends StatelessWidget {
+  final User? owner;
+  final bool isDarkMode;
+
+  const _ContactButtonsRow({required this.owner, required this.isDarkMode});
+
+  static const Color _accent = Color(0xFF2F80ED);
+
+  SocialOwner? _findWhatsApp() {
+    final o = owner;
+    if (o == null) return null;
+    for (final s in o.socials) {
+      if (s.socialType.title.toLowerCase() == 'whatsapp') return s;
+    }
+    return null;
+  }
+
+  Future<void> _openWhatsApp(BuildContext context, SocialOwner wa) async {
+    try {
+      await launchUrl(
+        Uri.parse(wa.socialType.domainUrl + wa.link),
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Не удалось открыть WhatsApp')),
+      );
+    }
+  }
+
+  Future<void> _call(BuildContext context, String phone) async {
+    final uri = Uri(scheme: 'tel', path: phone);
+    try {
+      await launchUrl(uri);
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Не удалось позвонить')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final wa = _findWhatsApp();
+    final phone = owner?.phone_number.trim() ?? '';
+    final hasPhone = phone.isNotEmpty;
+
+    final Color waBg = isDarkMode ? const Color(0xFF14181F) : Colors.white;
+    final Color waBorder =
+        (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.12);
+    final Color waText = isDarkMode ? Colors.white : Colors.black87;
+
+    final buttons = <Widget>[];
+
+    if (wa != null) {
+      buttons.add(
+        Expanded(
+          child: _ActionButton(
+            onTap: () => _openWhatsApp(context, wa),
+            background: waBg,
+            borderColor: waBorder,
+            iconWidget: Image.asset(
+              'assets/icons/socials_dark/whatsapp_dark.png',
+              width: 20.w,
+              height: 20.w,
+              fit: BoxFit.contain,
+              color: const Color(0xFF25D366),
+            ),
+            label: 'Написать в WhatsApp',
+            labelColor: waText,
           ),
         ),
-        SizedBox(width: 35.w),
-      ],
+      );
+    }
+
+    if (hasPhone) {
+      if (buttons.isNotEmpty) buttons.add(SizedBox(width: 10.w));
+      buttons.add(
+        Expanded(
+          child: _ActionButton(
+            onTap: () => _call(context, phone),
+            background: _accent,
+            borderColor: _accent,
+            iconWidget: const Icon(Icons.call, color: Colors.white, size: 20),
+            label: 'Позвонить',
+            labelColor: Colors.white,
+          ),
+        ),
+      );
+    }
+
+    if (buttons.isEmpty) return const SizedBox.shrink();
+
+    return Row(children: buttons);
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final VoidCallback onTap;
+  final Color background;
+  final Color borderColor;
+  final Widget iconWidget;
+  final String label;
+  final Color labelColor;
+
+  const _ActionButton({
+    required this.onTap,
+    required this.background,
+    required this.borderColor,
+    required this.iconWidget,
+    required this.label,
+    required this.labelColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        height: 50.h,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: borderColor),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            iconWidget,
+            SizedBox(width: 8.w),
+            Flexible(
+              child: TextTranslated(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: labelColor,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -963,7 +735,7 @@ class _ImageCarousel extends StatelessWidget {
                   pagination: SwiperPagination(
                     builder: DotSwiperPaginationBuilder(
                       color: Colors.grey.shade300,
-                      activeColor: Colors.blue,
+                      activeColor: const Color(0xFF2F80ED),
                       size: 6.0,
                       activeSize: 7.5,
                       space: 4.0,
@@ -1070,7 +842,7 @@ class _FavoriteButton extends StatelessWidget {
               icon: isFavorite
                   ? const Icon(
                       Icons.bookmark,
-                      color: Color(0xFF7B2FF2),
+                      color: Color(0xFF2F80ED),
                       size: 30,
                     )
                   : const Icon(
@@ -1112,95 +884,17 @@ class _FavoriteButton extends StatelessWidget {
   }
 }
 
-class _PriceSection extends StatelessWidget {
-  final User? owner;
-  final double? price;
-  final String currency;
-  final int? chooseMainType;
-  final bool? isRegistered;
-
-  const _PriceSection({
-    required this.owner,
-    required this.price,
-    required this.currency,
-    required this.chooseMainType,
-    required this.isRegistered,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final showFulfilment =
-        chooseMainType.toString() == "8" || chooseMainType.toString() == "4";
-
-    return InkWell(
-      onTap: () {
-        context.router.push(OtherUserProfileRoute(
-          username: owner?.username ?? "",
-          user: owner?.id ?? "",
-          productType: chooseMainType,
-          isRegistered: isRegistered,
-        ));
-      },
-      child: SizedBox(
-        width: double.infinity,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              FittedBox(
-                child: DualPriceText(
-                  price: price,
-                  currency: currency,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              SizedBox(height: 10.h),
-              if (showFulfilment)
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      context.router.push(const FulfilmentRoute());
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xff58A6DF),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                    child: const TextTranslated(
-                      "Перейти к фулфилменту",
-                      style: TextStyle(fontSize: 12, color: Colors.white),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _AboutProductSection extends StatelessWidget {
   final String name;
-  final String description;
   final int? regionId;
   final User? owner;
 
   const _AboutProductSection({
     required this.name,
-    required this.description,
     this.regionId,
     this.owner,
   });
 
-  /// The seller's active market link, if any — the "Рынок" row is shown
-  /// only for sellers actually attached to a market.
   String? get _marketName {
     final markets = owner?.supplierMarkets ?? const [];
     for (final link in markets) {
@@ -1236,17 +930,6 @@ class _AboutProductSection extends StatelessWidget {
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
             ),
           ],
-        ),
-        SizedBox(height: 12.h),
-        const TextTranslated(
-          "Описание:",
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-        ),
-        TextTranslated(
-          description,
-          maxLines: 6,
-          textAlign: TextAlign.start,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w400),
         ),
         if (regionTitle != null) ...[
           SizedBox(height: 12.h),
@@ -1413,6 +1096,493 @@ class _CommentsSection extends StatelessWidget {
           SizedBox(height: 20.h),
         ],
       ),
+    );
+  }
+}
+
+class _FinancingSection extends StatefulWidget {
+  final double carPrice;
+  final String currency;
+  final bool isDarkMode;
+
+  const _FinancingSection({
+    required this.carPrice,
+    required this.currency,
+    required this.isDarkMode,
+  });
+
+  @override
+  State<_FinancingSection> createState() => _FinancingSectionState();
+}
+
+class _FinancingSectionState extends State<_FinancingSection> {
+  static const Color _accent = Color(0xFF2F80ED);
+  static const Color _green = Color(0xFF2EB872);
+
+  static const double _downPaymentRate = 0.30;
+
+  int _tab = 2;
+  double _termMonths = 60;
+  bool _consentAccepted = false;
+
+  double get _bankMarkupRate => 0.20 * (_termMonths / 60);
+
+  String get _currencyLabel => switch (widget.currency.toUpperCase()) {
+        'KGS' => 'сом',
+        'USD' => '\$',
+        _ => widget.currency,
+      };
+
+  static String _fmt(num v) {
+    final s = v.round().toString();
+    final buf = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write(' ');
+      buf.write(s[i]);
+    }
+    return buf.toString();
+  }
+
+  String _money(num v) => '${_fmt(v)} $_currencyLabel';
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = widget.isDarkMode;
+
+    final price = widget.carPrice;
+    final downPayment = price * _downPaymentRate;
+    final financed = price - downPayment;
+    final markupRate = _bankMarkupRate;
+    final markup = financed * markupRate;
+    final totalPayable = financed + markup;
+    final monthly = _termMonths > 0 ? totalPayable / _termMonths : 0;
+
+    final Color cardColor = isDark ? const Color(0xFF14181F) : Colors.white;
+    final Color border =
+        (isDark ? Colors.white : Colors.black).withValues(alpha: 0.08);
+    final Color subText = isDark ? Colors.white60 : const Color(0xFF7A7A7A);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const TextTranslated(
+          'Ипотека и финансирование',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        ),
+        SizedBox(height: 10.h),
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF14181F) : const Color(0xFFF2F4F7),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.all(4),
+          child: Row(
+            children: [
+              _tabButton('Ипотека', 0),
+              _tabButton('Лизинг', 1),
+              _tabButton('Мурабаха', 2),
+            ],
+          ),
+        ),
+        SizedBox(height: 12.h),
+        Container(
+          padding: EdgeInsets.all(14.w),
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: border),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const _BakAiLogo(),
+                  SizedBox(height: 4.h),
+                  SizedBox(
+                    width: 90.w,
+                    child: Text(
+                      'Ваш инновационный мобильный банк',
+                      style: TextStyle(fontSize: 10, color: _accent),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: TextTranslated(
+                            'Покупка автомобиля по Мурабаха',
+                            style: TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        Icon(Icons.info_outline, size: 16, color: subText),
+                      ],
+                    ),
+                    SizedBox(height: 8.h),
+                    _bullet('Соответствует нормам шариата'),
+                    _bullet('Фиксированная наценка'),
+                    _bullet('Прозрачные условия'),
+                    _bullet('Срок финансирования до 20 лет.'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: 12.h),
+        Container(
+          padding: EdgeInsets.all(14.w),
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: TextTranslated(
+                      'Калькулятор Мурабаха',
+                      style:
+                          TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  Icon(Icons.edit_outlined, size: 18, color: subText),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              Row(
+                children: [
+                  Expanded(
+                    child:
+                        _field('Стоимость автомобиля', _money(price), subText),
+                  ),
+                  Expanded(
+                    child: _field(
+                      'Первоначальный взнос',
+                      '${(_downPaymentRate * 100).round()}%   ${_money(downPayment)}',
+                      subText,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              Row(
+                children: [
+                  Expanded(
+                      child:
+                          _field('Сумма Мурабаха', _money(financed), subText)),
+                  Expanded(
+                    child: _field(
+                      'Наценка банка',
+                      '${(markupRate * 100).toStringAsFixed(1)}%   ${_money(markup)}',
+                      subText,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              Row(
+                children: [
+                  Expanded(
+                      child: _field(
+                          'Сумма к оплате', _money(totalPayable), subText)),
+                  Expanded(
+                      child: _field(
+                          'Срок', '${_termMonths.round()} мес.', subText)),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.04)
+                      : const Color(0xFFF7F8FA),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: TextTranslated(
+                        'Ежемесячный платёж',
+                        style: TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    Text(
+                      _money(monthly),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: _accent,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 12.h),
+              const TextTranslated(
+                'Срок Мурабаха, месяцы',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  activeTrackColor: _accent,
+                  inactiveTrackColor: _accent.withValues(alpha: 0.2),
+                  thumbColor: _accent,
+                  overlayColor: _accent.withValues(alpha: 0.15),
+                  trackHeight: 4,
+                ),
+                child: Slider(
+                  min: 12,
+                  max: 60,
+                  divisions: 48,
+                  value: _termMonths,
+                  onChanged: (v) => setState(() => _termMonths = v),
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('12 мес.',
+                      style: TextStyle(fontSize: 12, color: subText)),
+                  Text('60 мес.',
+                      style: TextStyle(fontSize: 12, color: subText)),
+                ],
+              ),
+              SizedBox(height: 18.h),
+              InkWell(
+                onTap: () {
+                  setState(() {
+                    _consentAccepted = !_consentAccepted;
+                  });
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 24.w,
+                        height: 24.w,
+                        child: Checkbox(
+                          value: _consentAccepted,
+                          onChanged: (value) {
+                            setState(() {
+                              _consentAccepted = value ?? false;
+                            });
+                          },
+                          activeColor: _accent,
+                          checkColor: Colors.white,
+                          side: BorderSide(
+                            color: _consentAccepted
+                                ? _accent
+                                : isDark
+                                    ? Colors.white38
+                                    : const Color(0xFF9AA4B2),
+                            width: 1.5,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ),
+                      SizedBox(width: 10.w),
+                      Expanded(
+                        child: Text.rich(
+                          TextSpan(
+                            style: TextStyle(
+                              fontSize: 13,
+                              height: 1.35,
+                              color: isDark
+                                  ? Colors.white70
+                                  : const Color(0xFF8A94A3),
+                            ),
+                            children: const [
+                              TextSpan(
+                                text: 'Я даю согласие на передачу и обработку ',
+                              ),
+                              TextSpan(
+                                text: 'персональных данных',
+                                style: TextStyle(
+                                  color: _accent,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              TextSpan(text: ' в целях '),
+                              TextSpan(
+                                text: 'автофинансирования',
+                                style: TextStyle(
+                                  color: _accent,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(height: 16.h),
+              SizedBox(
+                width: double.infinity,
+                height: 52.h,
+                child: ElevatedButton(
+                  onPressed: _consentAccepted
+                      ? () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Заявка на автофинансирование'),
+                            ),
+                          );
+                        }
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _accent,
+                    disabledBackgroundColor: isDark
+                        ? const Color(0xFF253247)
+                        : const Color(0xFFD5DCE6),
+                    foregroundColor: Colors.white,
+                    disabledForegroundColor:
+                        isDark ? Colors.white38 : const Color(0xFF98A2B3),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const TextTranslated(
+                    'Подать заявку',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _tabButton(String label, int index) {
+    final active = _tab == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _tab = index),
+        child: Container(
+          height: 38,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: active
+                ? (widget.isDarkMode ? const Color(0xFF0E1420) : Colors.white)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(9),
+            border: active ? Border.all(color: _accent, width: 1.4) : null,
+          ),
+          child: TextTranslated(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+              color: active
+                  ? _accent
+                  : (widget.isDarkMode ? Colors.white70 : Colors.black54),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _bullet(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.check, size: 14, color: _green),
+          const SizedBox(width: 6),
+          Expanded(
+            child: TextTranslated(
+              text,
+              style: const TextStyle(fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _field(String label, String value, Color subText) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextTranslated(
+          label,
+          style: TextStyle(fontSize: 11, color: subText),
+        ),
+        SizedBox(height: 3.h),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        ),
+      ],
+    );
+  }
+}
+
+class _BakAiLogo extends StatelessWidget {
+  const _BakAiLogo();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.account_balance, color: Color(0xFFE5234B), size: 20),
+        const SizedBox(width: 4),
+        Text.rich(
+          TextSpan(
+            children: const [
+              TextSpan(
+                text: 'Bak',
+                style: TextStyle(
+                  color: Color(0xFFE5234B),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
+              ),
+              TextSpan(
+                text: 'Ai',
+                style: TextStyle(
+                  color: Color(0xFF2F80ED),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

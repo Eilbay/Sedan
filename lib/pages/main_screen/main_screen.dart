@@ -45,7 +45,7 @@ class _HomePageState extends State<HomePage>
   static const bool _showTypeTiles = false;
   static const bool _showFilters = false;
 
-  static const Color _accent = Color(0xFF7B2FF2);
+  static const Color _accent = Color(0xFF2F80ED);
 
   final _kGoods = GlobalKey();
   final _kManufacturers = GlobalKey();
@@ -392,9 +392,6 @@ class _HomePageState extends State<HomePage>
     debugPrint(
         '[PRELOAD] HomePage._startInitialLoading — products=${ps.products.length} categories=${cs.categories.length} stats=${ps.stats != null} defaultCat=$categoryId');
 
-    // Only fetch products if we have a category. When categories are still
-    // loading, the BlocListener<CategoryBloc> will trigger the fetch once
-    // they arrive — avoids a wasted request with cat=null.
     if (categoryId != null) {
       _fetchProductWithFilter();
     } else {
@@ -402,8 +399,6 @@ class _HomePageState extends State<HomePage>
           '[PRELOAD] HomePage: skipping product fetch — waiting for categories');
     }
 
-    // Only dispatch if not already loaded AND not currently loading
-    // (splash already dispatched CategoryAllEvent).
     if (cs.categories.isEmpty && !cs.isLoading) {
       debugPrint(
           '[PRELOAD] HomePage: categories empty & not loading, dispatching CategoryAllEvent');
@@ -426,11 +421,6 @@ class _HomePageState extends State<HomePage>
     }
   }
 
-  // 250ms debounce: imperceptible for single clicks (UX research treats
-  // <200ms as instant, 200-500ms as tolerable), but enough to collapse
-  // rapid sequential filter changes (double-tap, accidental misclick,
-  // user scrubbing through a sort dropdown) into a single API call.
-  // The previous 500ms felt laggy on price-input typing.
   void _onDebounceSearchOrFilter() {
     if (_debounce.isActive) _debounce.cancel();
     _debounce = Timer(const Duration(milliseconds: 250), () {
@@ -672,7 +662,7 @@ class _HomePageState extends State<HomePage>
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               const TextTranslated(
-                                'Рекомендации для вас',
+                                'Все объявления',
                                 style: TextStyle(
                                     fontSize: 16, fontWeight: FontWeight.w700),
                               ),
@@ -1150,8 +1140,8 @@ class _FilterRow extends StatelessWidget {
   }
 }
 
-/// Grid/list switch for the "Рекомендации для вас" section — mirrors two
-/// pill-shaped icon buttons, active one filled with the brand accent.
+/// Grid/list switch for the products section — two pill-shaped icon buttons,
+/// active one filled with the brand accent.
 class _FeedLayoutToggle extends StatelessWidget {
   const _FeedLayoutToggle({
     required this.isGridLayout,
@@ -1165,7 +1155,7 @@ class _FeedLayoutToggle extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool isDark = context.select((ThemeNotifier n) => n.isDarkMode);
     final Color trackColor =
-        isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF3F1FB);
+        isDark ? const Color(0xFF1C1C1E) : const Color(0xFFEAF1FC);
 
     return Container(
       padding: const EdgeInsets.all(3),
@@ -1263,16 +1253,10 @@ class _ProductsSliverGrid extends StatelessWidget {
             (_, index) {
               final product = products[index];
               return RepaintBoundary(
-                /*  child: MaybePromotedCard(
-                postId: product.id,
-                isPromoted: product.isPromoted,
-                promoEndAt: product.promoEndAt,
-                placement: PromotionPlacement.main,*/
                 child: MarketProductCard(
                   key: ValueKey(product.id),
                   results: product,
                   chooseMain: choseOwner,
-                  //categoryLabel: _categoryName(context, product),
                 ),
               );
             },

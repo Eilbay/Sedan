@@ -17,7 +17,7 @@ class AppColors {
 
   static const lightTitle = Colors.black;
   static const lightSubtitle = Colors.grey;
-  static const lightCurrency = Colors.green;
+  static const lightCurrency = Color(0xFF2F80ED);
   static const darkSubtitle = Colors.grey;
 
   static const white = Colors.white;

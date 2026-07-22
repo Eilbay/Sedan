@@ -166,7 +166,7 @@ class _SignUpState extends State<SignUp> {
                         ),
                         SizedBox(width: 3.w),
                         const Text(
-                          "Китайдан",
+                          "Sedan",
                           style: TextStyle(
                             fontFamily: 'Marmelad',
                             fontWeight: FontWeight.w400,

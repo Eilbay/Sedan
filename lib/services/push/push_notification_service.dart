@@ -9,9 +9,8 @@ import 'package:optombai/services/push/current_chat_tracker.dart';
 import 'package:optombai/services/push/push_payload.dart';
 
 const String _androidChannelId = 'kitaydan_default';
-const String _androidChannelName = 'Уведомления Китайдан';
-const String _androidChannelDescription =
-    'Сообщения, лайки и комментарии';
+const String _androidChannelName = 'Уведомления Sedan';
+const String _androidChannelDescription = 'Сообщения, лайки и комментарии';
 
 /// Owns the FCM lifecycle: requests permission, fetches the device
 /// token, syncs it with the backend, listens to foreground / tap /
@@ -94,9 +93,8 @@ class PushNotificationService {
       onDidReceiveNotificationResponse: _onLocalTap,
     );
 
-    final androidImpl =
-        _localNotifs.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+    final androidImpl = _localNotifs.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
     await androidImpl?.createNotificationChannel(
       const AndroidNotificationChannel(
         _androidChannelId,
@@ -139,7 +137,8 @@ class PushNotificationService {
   Future<void> unregisterCurrentDevice() async {
     final token = _currentToken ?? await _safeGetToken();
     if (token == null || token.isEmpty) return;
-    debugPrint('[PUSH] unregisterCurrentDevice token=${token.substring(0, 8)}...');
+    debugPrint(
+        '[PUSH] unregisterCurrentDevice token=${token.substring(0, 8)}...');
     try {
       await _deviceDataSource.unregister(token);
       debugPrint('[PUSH] device unregistered');
@@ -171,7 +170,8 @@ class PushNotificationService {
   }
 
   void _handleForeground(RemoteMessage message) {
-    debugPrint('[PUSH] onMessage (foreground) — title=${message.notification?.title} data=${message.data}');
+    debugPrint(
+        '[PUSH] onMessage (foreground) — title=${message.notification?.title} data=${message.data}');
     final payload = PushPayload.fromMessage(
       data: Map<String, dynamic>.from(message.data),
       title: message.notification?.title,
@@ -202,7 +202,8 @@ class PushNotificationService {
   }
 
   void _handleTap(RemoteMessage message) {
-    debugPrint('[PUSH] onMessageOpenedApp — title=${message.notification?.title} data=${message.data}');
+    debugPrint(
+        '[PUSH] onMessageOpenedApp — title=${message.notification?.title} data=${message.data}');
     final payload = PushPayload.fromMessage(
       data: Map<String, dynamic>.from(message.data),
       title: message.notification?.title,

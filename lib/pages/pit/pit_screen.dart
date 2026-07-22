@@ -69,7 +69,8 @@ class _PitScreenState extends State<PitScreen> {
 
     _availableMethods = PaymentAvailability.topUpMethods(region);
 
-    if (!_availableMethods.contains(_selectedMethod) && _availableMethods.isNotEmpty) {
+    if (!_availableMethods.contains(_selectedMethod) &&
+        _availableMethods.isNotEmpty) {
       _selectedMethod = _availableMethods.first;
     }
   }
@@ -159,7 +160,8 @@ class _PitScreenState extends State<PitScreen> {
     final user = context.read<UserBloc>().state.user;
     final beforeBalance = context.read<PitBloc>().state.balance;
 
-    final provider = _selectedMethod == PitPaymentMethod.finik ? 'finik' : 'freedompay';
+    final provider =
+        _selectedMethod == PitPaymentMethod.finik ? 'finik' : 'freedompay';
 
     final paymentId = await paymentService.initPit(
       amount: amount,
@@ -252,11 +254,14 @@ class _PitScreenState extends State<PitScreen> {
   Future<void> _processIAPPayment(double amount) async {
     debugPrint('PitScreen: _processIAPPayment called with amount=$amount');
     debugPrint('PitScreen: IAP available=${_iapService.isAvailable}');
-    debugPrint('PitScreen: All products=${_iapService.products.map((p) => p.id).toList()}');
-    debugPrint('PitScreen: Wallet products=${_iapService.getPitProducts().map((p) => p.id).toList()}');
+    debugPrint(
+        'PitScreen: All products=${_iapService.products.map((p) => p.id).toList()}');
+    debugPrint(
+        'PitScreen: Wallet products=${_iapService.getPitProducts().map((p) => p.id).toList()}');
 
     if (!_iapService.isAvailable) {
-      paymentService.showErrorMessage('In-App Purchase недоступен. Проверьте подключение к App Store.');
+      paymentService.showErrorMessage(
+          'In-App Purchase недоступен. Проверьте подключение к App Store.');
       return;
     }
 
@@ -273,8 +278,9 @@ class _PitScreenState extends State<PitScreen> {
 
     final product = _iapService.getPitProductByAmount(amount);
     if (product == null) {
-      final availableAmounts =
-          walletProducts.map((p) => IAPService.getPitAmount(p.id)?.toStringAsFixed(0) ?? p.id).join(', ');
+      final availableAmounts = walletProducts
+          .map((p) => IAPService.getPitAmount(p.id)?.toStringAsFixed(0) ?? p.id)
+          .join(', ');
       paymentService.showErrorMessage(
         'Продукт на сумму ${amount.toStringAsFixed(0)} не найден.\nДоступные: $availableAmounts',
       );
@@ -314,8 +320,8 @@ class _PitScreenState extends State<PitScreen> {
     final isDarkMode = context.select((ThemeNotifier n) => n.isDarkMode);
     final adWalletState = context.select((PitBloc b) => b.state);
     final bvState = context.watch<ButtonVisibleBloc>().state;
-    final isHiddenMode = bvState.status == FormStatus.submissionSuccess &&
-        !bvState.isVisible;
+    final isHiddenMode =
+        bvState.status == FormStatus.submissionSuccess && !bvState.isVisible;
 
     return _PitBlocListener(
       onIAPSuccess: (addedAmount) {
@@ -388,7 +394,8 @@ class _PitBlocListener extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocListener<PitBloc, PitState>(
       listenWhen: (previous, current) =>
-          previous.isIAPSuccess != current.isIAPSuccess || previous.errors != current.errors,
+          previous.isIAPSuccess != current.isIAPSuccess ||
+          previous.errors != current.errors,
       listener: (context, state) {
         if (state.isIAPSuccess && state.iapPitResponse != null) {
           final addedAmount = state.iapPitResponse!.addedAmount ?? 0;
@@ -458,9 +465,7 @@ class _PitScaffold extends StatelessWidget {
         onRefresh: () async {
           final bloc = context.read<PitBloc>();
           bloc.add(const LoadPitEvent());
-          await bloc.stream
-              .firstWhere((s) => !s.isLoading)
-              .timeout(
+          await bloc.stream.firstWhere((s) => !s.isLoading).timeout(
                 const Duration(seconds: 4),
                 onTimeout: () => bloc.state,
               );
@@ -547,7 +552,7 @@ class _RefundDisclaimer extends StatelessWidget {
           SizedBox(width: 8.w),
           Expanded(
             child: TextTranslated(
-              'Средства не подлежат возврату. Используются только для оплаты рекламных кампаний внутри Китайдан.',
+              'Средства не подлежат возврату. Используются только для оплаты рекламных кампаний внутри Sedan.',
               style: TextStyle(
                 fontSize: 12,
                 color: isDarkMode ? Colors.white70 : Colors.black54,

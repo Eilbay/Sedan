@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:optombai/configs/app_color.dart';
 import 'package:optombai/configs/constrants.dart';
 import 'package:optombai/core/appColors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -92,6 +93,7 @@ class ThemeNotifier extends ChangeNotifier {
 
   static final ThemeData lightTheme = ThemeData(
     brightness: Brightness.light,
+    colorSchemeSeed: activeColor,
     scaffoldBackgroundColor: Colors.white,
     pageTransitionsTheme: _noTransitionTheme,
     appBarTheme: const AppBarTheme(
@@ -111,6 +113,7 @@ class ThemeNotifier extends ChangeNotifier {
 
   static final ThemeData darkTheme = ThemeData(
     brightness: Brightness.dark,
+    colorSchemeSeed: activeColor,
     scaffoldBackgroundColor: Colors.black,
     pageTransitionsTheme: _noTransitionTheme,
     drawerTheme: const DrawerThemeData(backgroundColor: Colors.black),

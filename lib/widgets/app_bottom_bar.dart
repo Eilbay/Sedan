@@ -210,10 +210,10 @@ class AppBottomBar extends StatelessWidget {
 
   static const int messagesIndex = 100;
 
-  static const Color _selected = Color(0xFF7B2FF2);
+  static const Color _selected = Color(0xFF2F80ED);
 
   static const _fabGradient = LinearGradient(
-    colors: [Color(0xFF9D4EDD), Color(0xFF7B2FF2)],
+    colors: [Color(0xFF5B9DF5), Color(0xFF2F80ED)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -249,7 +249,7 @@ class AppBottomBar extends StatelessWidget {
           ),
           _tab(
             context,
-            icon: Icons.play_circle_outline,
+            icon: Icons.slideshow,
             labelKey: 'nav_streams',
             active: currentIndex == 2,
             onTap: () => onTabSelected(2),
@@ -307,12 +307,12 @@ class AppBottomBar extends StatelessWidget {
 
     return _tab(
       context,
-      icon: Icons.bar_chart_rounded,
+      icon: Icons.chat_outlined,
       labelKey: 'nav_active',
       active: active,
       onTap: onMessages,
       iconOverride: _IconWithBadge(
-        icon: Icons.bar_chart_rounded,
+        icon: Icons.chat_outlined,
         color: color,
         count: unread,
       ),

@@ -35,8 +35,9 @@ class MarketProductCard extends StatelessWidget {
     this.currency,
   });
 
+  static const Color _accent = Color(0xFF2F80ED);
   static const Color _discount = Color(0xFFE5234B);
-  static const Color _saved = Color(0xFF7B2FF2);
+  static const Color _saved = _accent;
 
   FavoriteResult? _likedOf(List<FavoriteResult> list) {
     if (results.id.isEmpty) return null;
@@ -51,31 +52,34 @@ class MarketProductCard extends StatelessWidget {
     if (liked != null) {
       bloc.add(FavoriteDelete(id: liked.id));
     } else {
-      bloc.add(FavoriteCreateEvent(
-        post: results.id,
-        favoriteResult: FavoriteResult(post: results),
-      ));
+      bloc.add(
+        FavoriteCreateEvent(
+          post: results.id,
+          favoriteResult: FavoriteResult(post: results),
+        ),
+      );
     }
   }
 
   void _openProduct(BuildContext context) {
-    context.router.push(ProductDetailsRoute(
-      results: results,
-      chooseMainType: chooseMain,
-    ));
+    context.router.push(
+      ProductDetailsRoute(results: results, chooseMainType: chooseMain),
+    );
   }
 
   void _openOwner(BuildContext context) {
     final String? countryName = results.owner?.country?.name;
     final String? flagPath =
         countryName != null ? kCountryFlags[countryName] : null;
-    context.router.push(OtherUserProfileRoute(
-      flagName: flagPath,
-      productType:
-          results.postType != null ? int.tryParse(results.postType!) : null,
-      user: results.owner?.id ?? '',
-      username: results.owner?.username ?? '',
-    ));
+    context.router.push(
+      OtherUserProfileRoute(
+        flagName: flagPath,
+        productType:
+            results.postType != null ? int.tryParse(results.postType!) : null,
+        user: results.owner?.id ?? '',
+        username: results.owner?.username ?? '',
+      ),
+    );
   }
 
   Future<void> _openChat(BuildContext context) async {
@@ -108,9 +112,9 @@ class MarketProductCard extends StatelessWidget {
       if (!context.mounted) return;
 
       if (state.errors.isNotEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(state.errors.join(', '))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(state.errors.join(', '))));
         return;
       }
 
@@ -121,9 +125,9 @@ class MarketProductCard extends StatelessWidget {
       context.router.push(ChatConversationRoute(chat: chat));
     } catch (_) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Не удалось открыть чат')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Не удалось открыть чат')));
     }
   }
 
@@ -170,7 +174,7 @@ class MarketProductCard extends StatelessWidget {
         ? '${_formatNumber(results.price!)} $currencyLabel'
         : 'Договорная';
 
-    final bool showVipBadge = _isAd;
+    final bool showAdBadge = _isAd;
 
     final Color fg = isDark ? Colors.white : Colors.black;
     final Color sub = isDark ? Colors.white60 : const Color(0xFF8A8A8A);
@@ -207,23 +211,8 @@ class MarketProductCard extends StatelessWidget {
                     showVideoIndicator: true,
                   ),
                 ),
-                if (showVipBadge)
-                  const Positioned(
-                    top: 8,
-                    left: 8,
-                    child: VipBadgeNew(),
-                  ),
-                Positioned(
-                  left: 0,
-                  bottom: 8,
-                  child: _PricePill(
-                    text: priceText,
-                    oldText: hasDiscount
-                        ? '${_formatNumber(oldPrice!)} $currencyLabel'
-                        : null,
-                    hasDiscount: hasDiscount,
-                  ),
-                ),
+                if (showAdBadge)
+                  const Positioned(left: 8, bottom: 8, child: _AdBadge()),
                 Positioned(
                   right: 6,
                   top: 6,
@@ -260,7 +249,7 @@ class MarketProductCard extends StatelessWidget {
                       SizedBox(height: 4.h),
                       TextTranslated(
                         results.description,
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 12,
@@ -269,6 +258,35 @@ class MarketProductCard extends StatelessWidget {
                         ),
                       ),
                     ],
+                    SizedBox(height: 6.h),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            priceText,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: hasDiscount ? _discount : _accent,
+                            ),
+                          ),
+                        ),
+                        if (hasDiscount) ...[
+                          SizedBox(width: 6.w),
+                          Text(
+                            '${_formatNumber(oldPrice!)} $currencyLabel',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: sub,
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                     const Spacer(),
                     Row(
                       children: [
@@ -306,8 +324,11 @@ class MarketProductCard extends StatelessWidget {
                                           if (results.owner?.is_verified ==
                                               true) ...[
                                             SizedBox(width: 2.w),
-                                            const Icon(Icons.verified,
-                                                color: Colors.green, size: 11),
+                                            const Icon(
+                                              Icons.verified,
+                                              color: Colors.green,
+                                              size: 11,
+                                            ),
                                           ],
                                         ],
                                       ),
@@ -329,8 +350,11 @@ class MarketProductCard extends StatelessWidget {
                           ),
                         ),
                         SizedBox(width: 4.w),
-                        const Icon(Icons.star,
-                            size: 13, color: Color(0xFFFFC107)),
+                        const Icon(
+                          Icons.star,
+                          size: 13,
+                          color: Color(0xFFFFC107),
+                        ),
                         SizedBox(width: 2.w),
                         Text(
                           ownerRating.toStringAsFixed(1),
@@ -358,52 +382,27 @@ class MarketProductCard extends StatelessWidget {
   }
 }
 
-class _PricePill extends StatelessWidget {
-  const _PricePill({
-    required this.text,
-    required this.oldText,
-    required this.hasDiscount,
-  });
-
-  final String text;
-  final String? oldText;
-  final bool hasDiscount;
+class _AdBadge extends StatelessWidget {
+  const _AdBadge();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(8, 3, 10, 3),
-      decoration: const BoxDecoration(
-        color: Color(0xFF15151C),
-        borderRadius: BorderRadius.only(
-          topRight: Radius.circular(8),
-          bottomRight: Radius.circular(8),
-        ),
+      width: 22,
+      height: 22,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: MarketProductCard._accent,
+        borderRadius: BorderRadius.circular(6),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (oldText != null)
-            Text(
-              oldText!,
-              style: const TextStyle(
-                fontSize: 9,
-                color: Colors.white38,
-                decoration: TextDecoration.lineThrough,
-              ),
-            ),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: hasDiscount
-                  ? const Color(0xFFFF6B8A)
-                  : const Color(0xFF9B7BFF),
-            ),
-          ),
-        ],
+      child: const Text(
+        'А',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          height: 1,
+        ),
       ),
     );
   }
@@ -423,13 +422,13 @@ class _BookmarkButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(5),
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.45),
+          color: Colors.white.withValues(alpha: 0.9),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
           isSaved ? Icons.bookmark : Icons.bookmark_border,
           size: 16,
-          color: isSaved ? const Color(0xFFB3A4F7) : Colors.white,
+          color: isSaved ? MarketProductCard._accent : Colors.black87,
         ),
       ),
     );
@@ -441,10 +440,7 @@ class VipBadgeNew extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Image.asset(
-      'assets/icons/vip_badge.png',
-      height: 22,
-    );
+    return Image.asset('assets/icons/vip_badge.png', height: 22);
   }
 }
 

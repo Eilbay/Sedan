@@ -113,13 +113,13 @@ flutter_launcher_icons:
   android: true
 
   # iOS
-  image_path_ios: "assets/logo_bazarlar.png"
+  image_path_ios: "assets/sedan.png"
   remove_alpha_ios: true
 
   # Android (adaptive)
-  image_path_android: "assets/logo_bazarlar.png"
+  image_path_android: "assets/sedan.png"
   android_adaptive_icon_background: "#ffffff"
-  android_adaptive_icon_foreground: "assets/pro2.png"
+  android_adaptive_icon_foreground: "assets/sedan.png"
   min_sdk_android: 21
 
 flutter:

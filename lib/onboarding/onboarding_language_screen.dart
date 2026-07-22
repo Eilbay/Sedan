@@ -60,7 +60,7 @@ class _OnboardingLanguageScreenState extends State<OnboardingLanguageScreen> {
                       Image.asset("assets/pro2.png", height: 54.h),
                       SizedBox(height: 8.h),
                       Text(
-                        'Китайдан',
+                        'Sedan',
                         style: TextStyle(
                           fontSize: 28.sp,
                           fontWeight: FontWeight.w800,
@@ -72,7 +72,7 @@ class _OnboardingLanguageScreenState extends State<OnboardingLanguageScreen> {
                 ),
                 SizedBox(height: 14.h),
                 TextTranslated(
-                  'Добро пожаловать в Китайдан!',
+                  'Добро пожаловать в Sedan!',
                   style:
                       TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w800),
                   textAlign: TextAlign.center,

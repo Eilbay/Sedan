@@ -55,13 +55,13 @@ class CustomScaffold extends StatelessWidget {
               : Container(color: AppColors.white),
           title: Row(
             children: [
-              Image.asset(
+              /*Image.asset(
                 stateSwitch
                     ? 'assets/logo_light.png'
                     : 'assets/logo_bazarlar.png',
                 height: 28.h,
                 fit: BoxFit.contain,
-              ),
+              ),*/
               SizedBox(width: 10.w),
               TextTranslated(displayTitle,
                   overflow: TextOverflow.ellipsis,
