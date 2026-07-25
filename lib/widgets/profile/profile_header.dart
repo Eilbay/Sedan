@@ -20,7 +20,6 @@ import 'package:optombai/bloc/chat_bloc/chat_bloc.dart';
 import 'package:optombai/data/models/account/user/socials/social_owner.dart';
 import 'package:optombai/data/models/account/user/socials/social_type.dart';
 import 'package:optombai/utils/extensions/social_type_icon_extension.dart';
-import 'package:optombai/widgets/utils/live_ring_avatar.dart';
 
 class ProfileHeader extends StatefulWidget {
   final User currentUser;
@@ -138,6 +137,7 @@ class _ProfileHeaderState extends State<ProfileHeader> {
 
     final canWrite =
         !widget.isCurrentUser && (widget.currentUser.by_admin != true);
+    final isMockAutoSalon = widget.currentUser.userType == 'auto_salon';
     final isBlockedByMeReactive = widget.currentUser.isBlockedByMe ||
         context.select((BlockBloc b) =>
             b.state.blockedIds.contains(widget.currentUser.id));
@@ -154,7 +154,8 @@ class _ProfileHeaderState extends State<ProfileHeader> {
         SizedBox(height: 22.h),
         _descriptionBlock(context, isDark),
         SizedBox(height: 18.h),
-        if (canWrite && !isBlockedByMeReactive) _contactCards(context, isDark),
+        if ((canWrite || isMockAutoSalon) && !isBlockedByMeReactive)
+          _contactCards(context, isDark),
       ],
     );
   }
@@ -269,9 +270,11 @@ class _ProfileHeaderState extends State<ProfileHeader> {
             ? 'Производитель'
             : user.userType == '16'
                 ? 'Покупатель'
-                : user.userType == '1'
-                    ? 'Админ'
-                    : 'Неизвестный тип';
+                : user.userType == 'auto_salon'
+                    ? 'Автосалон'
+                    : user.userType == '1'
+                        ? 'Админ'
+                        : 'Неизвестный тип';
 
     final marketBadges = <Widget>[];
     if (user.userType == '4' && user.supplierMarkets.isNotEmpty) {
@@ -284,7 +287,7 @@ class _ProfileHeaderState extends State<ProfileHeader> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _ProfileAvatarRing(user: user),
+        const _ProfileAvatarRing(),
         SizedBox(width: 14.w),
         Expanded(
           child: Column(
@@ -619,6 +622,7 @@ class _ProfileHeaderState extends State<ProfileHeader> {
   Widget _contactCards(BuildContext context, bool isDark) {
     final whatsapp = _findSocial('WhatsApp');
     final hasPhone = widget.currentUser.phone_number.trim().isNotEmpty;
+    final showChat = widget.currentUser.userType != 'auto_salon';
 
     final cards = <Widget>[];
 
@@ -635,15 +639,17 @@ class _ProfileHeaderState extends State<ProfileHeader> {
       ));
     }
 
-    cards.add(_contactCard(
-      isDark: isDark,
-      icon: Icons.forum_rounded,
-      iconColor: _purple,
-      iconBg: _purple.withValues(alpha: 0.12),
-      title: 'Написать\nв чат',
-      subtitle: 'Ответим здесь',
-      onTap: () => _openChat(context),
-    ));
+    if (showChat) {
+      cards.add(_contactCard(
+        isDark: isDark,
+        icon: Icons.forum_rounded,
+        iconColor: _purple,
+        iconBg: _purple.withValues(alpha: 0.12),
+        title: 'Написать\nв чат',
+        subtitle: 'Ответим здесь',
+        onTap: () => _openChat(context),
+      ));
+    }
 
     if (hasPhone) {
       cards.add(_contactCard(
@@ -956,34 +962,24 @@ class _DescriptionWidgetState extends State<DescriptionWidget> {
 }
 
 class _ProfileAvatarRing extends StatelessWidget {
-  const _ProfileAvatarRing({required this.user});
-
-  final User user;
+  const _ProfileAvatarRing();
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.select((ThemeNotifier n) => n.isDarkMode);
+    final bg = isDark ? const Color(0xFF14181F) : const Color(0xFFF1F4F8);
+    final fg = isDark ? Colors.white70 : Colors.grey.shade600;
+
     return SizedBox(
       width: 92.w,
       height: 92.w,
-      child: LiveRingAvatar(
-        radius: 46.w,
-        ownerId: user.id,
-        imageUrl: user.image,
-        child: user.image == null
-            ? Icon(Icons.person, size: 44, color: Colors.grey.shade500)
-            : null,
-        notLiveRingBuilder: (avatar) => Container(
-          padding: const EdgeInsets.all(2.5),
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              colors: [Colors.red, Colors.purple],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          child: avatar,
+      child: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: bg,
+          border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
         ),
+        child: Icon(Icons.person, size: 48, color: fg),
       ),
     );
   }

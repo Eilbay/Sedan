@@ -25,6 +25,8 @@ import 'package:optombai/widgets/common/pagination_widget.dart';
 import 'package:optombai/widgets/common/upload_progress_banner.dart';
 import 'package:optombai/widgets/utils/dropdown/home_dropdown.dart';
 import 'package:optombai/widgets/bottom_nav.dart';
+import 'package:optombai/utils/category_asset_resolver.dart';
+import 'package:optombai/data/mock/sedan_mock_listings.dart';
 import 'package:auto_route/auto_route.dart';
 
 @RoutePage()
@@ -533,6 +535,7 @@ class _HomePageState extends State<HomePage>
           builder: (context, state) {
             final ordering = _sortOptions[indexSort].value;
             final isInitialLoading = state.products.isEmpty && state.isLoading;
+            final mockListings = filterSedanMockListings(search);
 
             return Scrollbar(
               controller: _controller,
@@ -563,7 +566,6 @@ class _HomePageState extends State<HomePage>
                               ),
                               child: _SearchField(onChanged: (q) {
                                 setState(() => search = q.isEmpty ? null : q);
-                                _onDebounceSearchOrFilter();
                               }),
                             ),
                           ),
@@ -677,7 +679,27 @@ class _HomePageState extends State<HomePage>
                       ),
                     ),
                   ),
-                  if (isInitialLoading)
+                  if (mockListings.isNotEmpty)
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 15),
+                      sliver: _SedanMockListingsSliver(
+                        listings: mockListings,
+                        isDarkMode: isDarkMode,
+                        isGridLayout: _isGridLayout,
+                      ),
+                    )
+                  else if (search?.trim().isNotEmpty ?? false)
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 15),
+                      sliver: SliverToBoxAdapter(
+                        child: EmptyComment(
+                          subTitle: 'По вашему запросу ничего не найдено',
+                          image: 'assets/icons/korzinka.png',
+                          height: 190.h,
+                        ),
+                      ),
+                    )
+                  else if (isInitialLoading)
                     const SliverPadding(
                       padding: EdgeInsets.symmetric(horizontal: 15),
                       sliver: SliverToBoxAdapter(
@@ -765,17 +787,33 @@ class _SearchField extends StatelessWidget {
   const _SearchField({required this.onChanged});
   @override
   Widget build(BuildContext context) {
-    return CustomSearchField(
-      focusBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15),
-        borderSide: const BorderSide(color: Colors.grey),
+    final isDarkMode = context.select((ThemeNotifier n) => n.isDarkMode);
+    final borderColor = isDarkMode ? Colors.white12 : Colors.grey.shade300;
+    final hintColor = isDarkMode ? Colors.white60 : const Color(0xff797979);
+    final textColor = isDarkMode ? Colors.white : Colors.black87;
+    final iconColor = isDarkMode ? Colors.white70 : const Color(0xff797979);
+
+    return TextField(
+      onChanged: onChanged,
+      textInputAction: TextInputAction.search,
+      style: TextStyle(color: textColor, fontSize: 16),
+      decoration: InputDecoration(
+        prefixIcon: Icon(Icons.search, color: iconColor, size: 28),
+        hintText: 'Поиск авто на Sedan.Kg',
+        hintStyle: TextStyle(color: hintColor, fontSize: 16),
+        filled: true,
+        fillColor: Colors.transparent,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide(color: borderColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: const BorderSide(color: Colors.grey),
+        ),
       ),
-      onChange: onChanged,
-      onSubmit: (query) {
-        context.router.push(ResultsRoute(
-          initialSearch: query,
-        ));
-      },
     );
   }
 }
@@ -852,9 +890,17 @@ class _CategoriesStrip extends StatelessWidget {
             separatorBuilder: (_, __) => SizedBox(width: 10.w),
             itemBuilder: (ctx, i) {
               final c = cats[i];
+              final localAsset = localCategoryAssetForName(c.name);
+              final mockCategoryKey = sedanMockCategoryKeyForName(c.name);
               return GestureDetector(
                 onTap: () {
-                  if (c.children.isNotEmpty) {
+                  if (mockCategoryKey != null) {
+                    context.router.push(ProductsRoute(
+                      childId: mockCategoryKey,
+                      title: c.name,
+                      mockCategoryKey: mockCategoryKey,
+                    ));
+                  } else if (c.children.isNotEmpty) {
                     context.router.push(SubcategoryRoute(
                       title: c.name,
                       children0: c.children,
@@ -875,24 +921,29 @@ class _CategoriesStrip extends StatelessWidget {
                         child: SizedBox(
                           width: 70.w,
                           height: 70.w,
-                          child: c.icon.isNotEmpty
-                              ? CachedNetworkImage(
-                                  imageUrl: c.icon,
+                          child: localAsset != null
+                              ? Image.asset(
+                                  localAsset,
                                   fit: BoxFit.cover,
-                                  placeholder: (_, __) => Container(
-                                    color: isDark
-                                        ? Colors.grey[800]
-                                        : const Color(0xFFF0F0F0),
-                                  ),
-                                  errorWidget: (_, __, ___) => Image.asset(
-                                    'assets/card_image.png',
-                                    fit: BoxFit.cover,
-                                  ),
                                 )
-                              : Image.asset(
-                                  'assets/card_image.png',
-                                  fit: BoxFit.cover,
-                                ),
+                              : c.icon.isNotEmpty
+                                  ? CachedNetworkImage(
+                                      imageUrl: c.icon,
+                                      fit: BoxFit.cover,
+                                      placeholder: (_, __) => Container(
+                                        color: isDark
+                                            ? Colors.grey[800]
+                                            : const Color(0xFFF0F0F0),
+                                      ),
+                                      errorWidget: (_, __, ___) => Image.asset(
+                                        'assets/card_image.png',
+                                        fit: BoxFit.cover,
+                                      ),
+                                    )
+                                  : Image.asset(
+                                      'assets/card_image.png',
+                                      fit: BoxFit.cover,
+                                    ),
                         ),
                       ),
                       SizedBox(height: 6.h),
@@ -1208,6 +1259,206 @@ class _FeedLayoutToggleButton extends StatelessWidget {
           icon,
           size: 18,
           color: isSelected ? Colors.white : Colors.grey,
+        ),
+      ),
+    );
+  }
+}
+
+class _SedanMockListingsSliver extends StatelessWidget {
+  const _SedanMockListingsSliver({
+    required this.listings,
+    required this.isDarkMode,
+    required this.isGridLayout,
+  });
+
+  final List<SedanMockListing> listings;
+  final bool isDarkMode;
+  final bool isGridLayout;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isGridLayout) {
+      return SliverGrid(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 16.h,
+          crossAxisSpacing: 12.w,
+          mainAxisExtent: 300.h,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (context, index) => _SedanHomeListingCard(
+            listing: listings[index],
+            isDarkMode: isDarkMode,
+          ),
+          childCount: listings.length,
+        ),
+      );
+    }
+
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) => Padding(
+          padding: EdgeInsets.only(bottom: 14.h),
+          child: _SedanHomeListingCard(
+            listing: listings[index],
+            isDarkMode: isDarkMode,
+            isWide: true,
+          ),
+        ),
+        childCount: listings.length,
+      ),
+    );
+  }
+}
+
+class _SedanHomeListingCard extends StatelessWidget {
+  const _SedanHomeListingCard({
+    required this.listing,
+    required this.isDarkMode,
+    this.isWide = false,
+  });
+
+  final SedanMockListing listing;
+  final bool isDarkMode;
+  final bool isWide;
+
+  @override
+  Widget build(BuildContext context) {
+    final categoryTitle = sedanMockCategoryTitleForKey(listing.categoryKey);
+    final bg = isDarkMode ? const Color(0xFF111116) : Colors.white;
+    final fg = isDarkMode ? Colors.white : Colors.black;
+    final sub = isDarkMode ? Colors.white60 : const Color(0xFF707070);
+    final border = isDarkMode
+        ? Colors.white.withValues(alpha: 0.08)
+        : const Color(0xFFE5E5E5);
+
+    return GestureDetector(
+      onTap: () => context.router.push(ProductsRoute(
+        childId: listing.categoryKey,
+        title: categoryTitle,
+        mockCategoryKey: listing.categoryKey,
+      )),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: border),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: isWide ? 6 : 5,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.asset(
+                      listing.imageAsset,
+                      fit: BoxFit.cover,
+                    ),
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.bookmark_border,
+                          color: Colors.black,
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: 8,
+                      bottom: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _HomePageState._accent,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          categoryTitle,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                flex: isWide ? 4 : 5,
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        listing.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: fg,
+                          fontSize: 15,
+                          height: 1.15,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        listing.condition,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: sub,
+                          fontSize: 12,
+                          height: 1.25,
+                        ),
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        listing.price,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: _HomePageState._accent,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const Spacer(),
+                      Row(
+                        children: [
+                          Icon(Icons.location_on_outlined,
+                              color: sub, size: 16),
+                          SizedBox(width: 4.w),
+                          Text(
+                            'Бишкек',
+                            style: TextStyle(color: sub, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:optombai/core/debug/talker_instance.dart';
 import 'package:optombai/core/error/crash_log_file.dart';
@@ -106,21 +105,7 @@ class GlobalErrorHandler {
     // Fire-and-forget — append() catches its own errors internally.
     CrashLogFile.append(record.toString());
 
-    // 4. Firebase Crashlytics — server-side aggregation across all users.
-    //    Non-fatal so the app keeps running. Crashes that escape ALL
-    //    handlers (native crashes, isolate errors) are caught by
-    //    Crashlytics SDK at the native layer separately.
-    try {
-      FirebaseCrashlytics.instance.recordError(
-        error,
-        stack,
-        reason: 'ErrorSource.${source.name}',
-        fatal: false,
-      );
-    } catch (_) {
-      // Crashlytics may not be initialized in early bootstrap or in
-      // tests — swallow to avoid recursive failure.
-    }
+    // 4. Offline mock app: Firebase/Crashlytics is intentionally disabled.
   }
 
   /// True for non-fatal image-fetch failures. CachedNetworkImage / NetworkImage

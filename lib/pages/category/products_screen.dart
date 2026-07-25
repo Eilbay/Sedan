@@ -16,6 +16,7 @@ import 'package:optombai/widgets/product/feed_banner_card.dart';
 import 'package:optombai/widgets/product/product_feed_card.dart';
 import 'package:optombai/widgets/shimmer/shimmer_product_grid.dart';
 import 'package:optombai/data/models/posts/post_model.dart';
+import 'package:optombai/data/mock/sedan_mock_listings.dart';
 import 'package:optombai/pages/main_screen/main_screen.dart';
 import 'package:optombai/widgets/promotion/maybe_promoted_card.dart';
 import 'package:optombai/widgets/promotion/promotion_placement.dart';
@@ -38,13 +39,32 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 @RoutePage()
 class ProductsScreen extends StatelessWidget {
-  const ProductsScreen({super.key, required this.childId, required this.title});
+  const ProductsScreen({
+    super.key,
+    required this.childId,
+    required this.title,
+    this.mockCategoryKey,
+  });
 
   final String title;
   final String childId;
+  final String? mockCategoryKey;
 
   @override
   Widget build(BuildContext context) {
+    final mock = mockCategoryKey != null
+        ? sedanMockListingForKey(mockCategoryKey!)
+        : sedanMockListingForCategory(title) ?? sedanMockListingForKey(childId);
+
+    if (mock != null) {
+      final isDarkMode = context.select((ThemeNotifier n) => n.isDarkMode);
+      return _MockListingScaffold(
+        title: title,
+        listing: mock,
+        isDarkMode: isDarkMode,
+      );
+    }
+
     // Scoped ProductBloc isolates this screen's feed from the global one the
     // home screen uses. Without this, filtering by category here overwrites
     // the shared bloc's state — going back to the home tab afterwards showed
@@ -56,16 +76,25 @@ class ProductsScreen extends StatelessWidget {
         repository: getIt<IProductRepository>(),
         preferences: getIt<SharedPreferences>(),
       ),
-      child: _ProductsView(childId: childId, title: title),
+      child: _ProductsView(
+        childId: childId,
+        title: title,
+        mockCategoryKey: mockCategoryKey,
+      ),
     );
   }
 }
 
 class _ProductsView extends StatefulWidget {
-  const _ProductsView({required this.childId, required this.title});
+  const _ProductsView({
+    required this.childId,
+    required this.title,
+    this.mockCategoryKey,
+  });
 
   final String title;
   final String childId;
+  final String? mockCategoryKey;
 
   @override
   State<_ProductsView> createState() => _ProductsViewState();
@@ -74,9 +103,20 @@ class _ProductsView extends StatefulWidget {
 class _ProductsViewState extends State<_ProductsView> {
   final ScrollController _controller = ScrollController();
   bool get isStockCategory => widget.title.toLowerCase().contains("склад");
+  SedanMockListing? get mockListing {
+    final key = widget.mockCategoryKey;
+    if (key != null) return sedanMockListingForKey(key);
+    return sedanMockListingForCategory(widget.title) ??
+        sedanMockListingForKey(widget.childId);
+  }
 
   @override
   void initState() {
+    if (mockListing != null) {
+      super.initState();
+      return;
+    }
+
     BlocProvider.of<ProductBloc>(context)
         .add(ProductWithFilter(category: widget.childId));
     choseMain ??= 2;
@@ -570,6 +610,7 @@ class _ProductsViewState extends State<_ProductsView> {
   @override
   Widget build(BuildContext context) {
     bool isDarkMode = context.select((ThemeNotifier n) => n.isDarkMode);
+    final mock = mockListing;
 
     if (isStockCategory) {
       return CustomScaffold(
@@ -579,6 +620,14 @@ class _ProductsViewState extends State<_ProductsView> {
         ),
         title: widget.title,
         child: _buildProductsTab(context),
+      );
+    }
+
+    if (mock != null) {
+      return _MockListingScaffold(
+        title: widget.title,
+        listing: mock,
+        isDarkMode: isDarkMode,
       );
     }
 
@@ -638,6 +687,309 @@ class _ProductsViewState extends State<_ProductsView> {
               passive: true,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MockListingScaffold extends StatefulWidget {
+  const _MockListingScaffold({
+    required this.title,
+    required this.listing,
+    required this.isDarkMode,
+  });
+
+  final String title;
+  final SedanMockListing listing;
+  final bool isDarkMode;
+
+  @override
+  State<_MockListingScaffold> createState() => _MockListingScaffoldState();
+}
+
+class _MockListingScaffoldState extends State<_MockListingScaffold> {
+  String _search = '';
+
+  bool get _matchesSearch {
+    final query = _search.trim().toLowerCase();
+    if (query.isEmpty) return true;
+
+    final listing = widget.listing;
+    final searchable = [
+      listing.title,
+      listing.price,
+      listing.condition,
+      ...listing.specs.map((spec) => '${spec.label} ${spec.value}'),
+    ].join(' ').toLowerCase();
+
+    return searchable.contains(query);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: widget.isDarkMode ? AppColors.black : AppColors.white,
+      appBar: AppBar(
+        backgroundColor: widget.isDarkMode ? AppColors.black : AppColors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          color: widget.isDarkMode ? Colors.white : Colors.black,
+          onPressed: () => context.router.maybePop(),
+        ),
+        centerTitle: false,
+        title: Text(
+          widget.title,
+          style: TextStyle(
+            color: widget.isDarkMode ? Colors.white : Colors.black,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: FilledButton(
+              onPressed: () {},
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF007AFF),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+              ),
+              child: const Text(
+                'Фильтр',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
+                sliver: SliverToBoxAdapter(
+                  child: _MockSearchField(
+                    isDarkMode: widget.isDarkMode,
+                    onChanged: (value) => setState(() => _search = value),
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 15),
+                sliver: SliverToBoxAdapter(
+                  child: _matchesSearch
+                      ? _MockListingCard(
+                          listing: widget.listing,
+                          isDarkMode: widget.isDarkMode,
+                        )
+                      : EmptyComment(
+                          subTitle: 'В выбранной категории товары отсутствуют',
+                          image: 'assets/icons/korzinka.png',
+                          height: 190.h,
+                        ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: kBottomNavigationBarHeight +
+                      MediaQuery.viewPaddingOf(context).bottom +
+                      20,
+                ),
+              ),
+            ],
+          ),
+          const Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: BottomNav(
+              currentIndexOverride: -2,
+              passive: true,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MockSearchField extends StatelessWidget {
+  const _MockSearchField({
+    required this.isDarkMode,
+    required this.onChanged,
+  });
+
+  final bool isDarkMode;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final borderColor = isDarkMode ? Colors.white12 : Colors.grey.shade300;
+    final hintColor = isDarkMode ? Colors.white60 : const Color(0xff797979);
+    final textColor = isDarkMode ? Colors.white : Colors.black87;
+    final iconColor = isDarkMode ? Colors.white70 : const Color(0xff797979);
+
+    return TextField(
+      onChanged: onChanged,
+      textInputAction: TextInputAction.search,
+      style: TextStyle(color: textColor, fontSize: 16),
+      decoration: InputDecoration(
+        prefixIcon: Icon(Icons.search, color: iconColor, size: 28),
+        hintText: 'Поиск авто на Sedan.Kg',
+        hintStyle: TextStyle(color: hintColor, fontSize: 16),
+        filled: true,
+        fillColor: Colors.transparent,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide(color: borderColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: const BorderSide(color: Colors.grey),
+        ),
+      ),
+    );
+  }
+}
+
+class _MockListingCard extends StatelessWidget {
+  const _MockListingCard({
+    required this.listing,
+    required this.isDarkMode,
+  });
+
+  final SedanMockListing listing;
+  final bool isDarkMode;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = isDarkMode ? Colors.white : Colors.black;
+    final sub = isDarkMode ? Colors.white70 : const Color(0xFF666666);
+    final cardColor = isDarkMode ? const Color(0xFF111111) : Colors.white;
+    final borderColor = isDarkMode
+        ? Colors.white.withValues(alpha: 0.10)
+        : const Color(0xFFE8E8E8);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColor),
+        boxShadow: isDarkMode
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.07),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+            child: AspectRatio(
+              aspectRatio: 1.65,
+              child: Image.asset(
+                listing.imageAsset,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  listing.title,
+                  style: TextStyle(
+                    color: fg,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                ...listing.specs.map(
+                  (spec) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: _MockSpecRow(
+                      label: spec.label,
+                      value: spec.value,
+                      fg: fg,
+                      sub: sub,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                _MockSpecRow(
+                  label: 'Состояние',
+                  value: listing.condition,
+                  fg: fg,
+                  sub: sub,
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  listing.price,
+                  style: const TextStyle(
+                    color: Color(0xFF007AFF),
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MockSpecRow extends StatelessWidget {
+  const _MockSpecRow({
+    required this.label,
+    required this.value,
+    required this.fg,
+    required this.sub,
+  });
+
+  final String label;
+  final String value;
+  final Color fg;
+  final Color sub;
+
+  @override
+  Widget build(BuildContext context) {
+    return RichText(
+      text: TextSpan(
+        style: TextStyle(
+          color: sub,
+          fontSize: 14,
+          height: 1.35,
+        ),
+        children: [
+          TextSpan(
+            text: '$label: ',
+            style: TextStyle(color: fg, fontWeight: FontWeight.w700),
+          ),
+          TextSpan(text: value),
         ],
       ),
     );

@@ -33,6 +33,9 @@ class ReelPlaybackManager {
   /// Whether the player at index is initialized (first frame ready).
   final Map<int, bool> initialized = {};
 
+  /// Last initialization error by reel index, surfaced by the UI.
+  final Map<int, String> errors = {};
+
   final Set<int> _pendingInit = {};
   final Map<int, String> _playerUrls = {};
   final IPlayerFactory? _playerFactory;
@@ -161,6 +164,7 @@ class ReelPlaybackManager {
     required bool withDelay,
   }) {
     if (targetIndex < 0 || targetIndex >= _preloadReelCount) return;
+    if (urlsAt(targetIndex).startsWith('assets/')) return;
     if (players.containsKey(targetIndex) ||
         _pendingInit.contains(targetIndex)) {
       return;
@@ -206,6 +210,7 @@ class ReelPlaybackManager {
     }
     for (final key in keysToRemove) {
       _pendingInit.remove(key);
+      errors.remove(key);
       final controller = players.remove(key);
       if (controller != null) unawaited(controller.dispose());
       _playerUrls.remove(key);
@@ -225,9 +230,12 @@ class ReelPlaybackManager {
     if (_pendingInit.contains(index) || players.containsKey(index)) return;
 
     _pendingInit.add(index);
+    errors.remove(index);
 
     // Try pre-buffered player first (instant, no network).
-    final preBuffered = _preBufferService?.take(streamUrl);
+    final isAssetVideo = streamUrl.startsWith('assets/');
+    final preBuffered =
+        isAssetVideo ? null : _preBufferService?.take(streamUrl);
     if (preBuffered != null) {
       if (_disposed) {
         unawaited(preBuffered.controller.dispose());
@@ -264,8 +272,7 @@ class ReelPlaybackManager {
 
     // Pre-buffer miss — creating player from scratch (this causes progress bar).
     final sw = Stopwatch()..start();
-    _logReel(
-        '[REEL] PRE-BUFFER MISS index=$index — cold start from network');
+    _logReel('[REEL] PRE-BUFFER MISS index=$index — cold start from network');
 
     try {
       // Stale generation, but user landed back on this exact index in the new
@@ -371,11 +378,18 @@ class ReelPlaybackManager {
       }
     } catch (error) {
       _pendingInit.remove(index);
+      errors[index] = error.toString();
       _logReel('[REEL] init FAILED index=$index: $error', isWarning: true);
       players.remove(index);
       initialized.remove(index);
+      if (_currentCenterIndex == index) {
+        _onCurrentReady?.call();
+      }
 
-      if (!isRetry && !_disposed && _generation == generation) {
+      if (!isRetry &&
+          !isAssetVideo &&
+          !_disposed &&
+          _generation == generation) {
         await Future<void>.delayed(const Duration(seconds: 1));
         if (!_disposed &&
             !players.containsKey(index) &&
@@ -461,6 +475,7 @@ class ReelPlaybackManager {
       final controller = players.remove(key);
       final url = _playerUrls.remove(key);
       initialized.remove(key);
+      errors.remove(key);
 
       // Return to pool instead of disposing — allows instant replay on backward scroll.
       if (controller != null && url != null && _preBufferService != null) {
@@ -507,6 +522,7 @@ class ReelPlaybackManager {
     players.clear();
     _playerUrls.clear();
     initialized.clear();
+    errors.clear();
     _pendingInit.clear();
     _onCurrentReady = null;
   }

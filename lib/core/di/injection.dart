@@ -25,11 +25,6 @@ import 'package:optombai/data/repositories/i_admin_request_repository.dart';
 import 'package:optombai/data/repositories/i_block_repository.dart';
 import 'package:optombai/data/repositories/i_report_repository.dart';
 
-// Implementations
-import 'package:optombai/data/repositories/product_repository.dart';
-import 'package:optombai/data/repositories/user_repository.dart';
-import 'package:optombai/data/repositories/auth_request.dart';
-import 'package:optombai/data/repositories/category_repository.dart';
 import 'package:optombai/data/repositories/chat_repository.dart';
 import 'package:optombai/data/repositories/comment_repository.dart';
 import 'package:optombai/data/repositories/favorite_repository.dart';
@@ -47,6 +42,7 @@ import 'package:optombai/data/repositories/support_repository.dart';
 import 'package:optombai/data/repositories/admin_request_repository.dart';
 import 'package:optombai/data/repositories/block_repository.dart';
 import 'package:optombai/data/repositories/report_repository.dart';
+import 'package:optombai/data/mock/mock_repositories.dart';
 
 // Feature repositories
 import 'package:optombai/features/promotion/domain/repository/promotion_repository.dart';
@@ -73,7 +69,7 @@ import 'package:optombai/services/cart_storage_service.dart';
 import 'package:optombai/services/chat_auth_guard.dart';
 import 'package:optombai/services/video_pre_buffer_service.dart';
 import 'package:optombai/services/analytics/i_analytics_service.dart';
-import 'package:optombai/services/analytics/firebase_analytics_service.dart';
+import 'package:optombai/services/analytics/noop_analytics_service.dart';
 
 final getIt = GetIt.instance;
 
@@ -86,16 +82,16 @@ void configureDependencies(SharedPreferences preferences) {
 
   // ── Repositories (lazy singletons: interface -> concrete) ─────────────
   getIt.registerLazySingleton<IProductRepository>(
-    () => ProductRepository(),
+    () => MockProductRepository(),
   );
   getIt.registerLazySingleton<IUserRepository>(
-    () => UserRepository(),
+    () => MockUserRepository(),
   );
   getIt.registerLazySingleton<IAuthRepository>(
-    () => AuthRepository(),
+    () => MockAuthRepository(),
   );
   getIt.registerLazySingleton<ICategoryRepository>(
-    () => CategoryRepository(),
+    () => MockCategoryRepository(),
   );
   getIt.registerLazySingleton<IChatRepository>(
     () => ChatRepository(),
@@ -181,7 +177,7 @@ void configureDependencies(SharedPreferences preferences) {
     () => ConnectivityConfig(),
   );
   getIt.registerLazySingleton<IAnalyticsService>(
-    () => FirebaseAnalyticsService(),
+    () => NoopAnalyticsService(),
   );
 
   // ── Notifications & push ─────────────────────────────────────────────

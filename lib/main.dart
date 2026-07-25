@@ -1,19 +1,14 @@
 import 'dart:async';
-import 'dart:io' show Platform;
 import 'dart:ui' show PlatformDispatcher;
 
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:optombai/app/app.dart';
 import 'package:optombai/core/theme_notifier.dart';
-import 'package:optombai/firebase_options.dart';
 import 'package:optombai/services/config_service.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
-import 'package:optombai/services/iap_service.dart';
 import 'package:optombai/core/debug/frame_timing_logger.dart';
 import 'package:optombai/core/debug/heartbeat_service.dart';
 import 'package:optombai/core/di/injection.dart';
@@ -65,9 +60,6 @@ Future<void> _appMain() async {
   // and video_view_screen migrate off media_kit.
   MediaKit.ensureInitialized();
 
-  // Firebase is required for blocs/services created right after runApp.
-  await _initializeFirebase();
-
   // Initialize SharedPreferences
   final preferences = await SharedPreferences.getInstance();
 
@@ -82,7 +74,8 @@ Future<void> _appMain() async {
 
   // Hook OS memory-pressure notifications to drop the pre-buffer pool
   // before iOS/Android decide to kill us. Must run AFTER DI is configured.
-  MemoryPressureHandler(preBufferService: getIt<IVideoPreBufferService>()).attach();
+  MemoryPressureHandler(preBufferService: getIt<IVideoPreBufferService>())
+      .attach();
   debugPrint('[INIT] memory pressure handler attached');
 
   // Hook AppLifecycleState transitions so we get clean-shutdown markers
@@ -111,21 +104,6 @@ Future<void> _appMain() async {
 
   // Non-critical services are initialized after first frame.
   unawaited(_initializeDeferredServices());
-}
-
-Future<void> _initializeFirebase() async {
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    // Crashlytics: enable collection in every build. We rely on
-    // Crashlytics for both debug-time test crashes (manual ⚡ button)
-    // and production crash reporting. To avoid debug spam in the
-    // dashboard later, filter by app version in Firebase Console.
-    await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
-  } catch (e) {
-    debugPrint('Firebase initialization error: $e');
-  }
 }
 
 Future<void> _initializeHive() async {
@@ -164,20 +142,8 @@ Future<void> _initializeDeferredServices() async {
   await Future<void>.delayed(const Duration(milliseconds: 100));
 
   try {
-    await ConfigService.refreshConfig();
-  } catch (e) {
-    debugPrint('ConfigService refresh error: $e');
-  }
-
-  try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
     debugPrint('.env load error: $e');
-  }
-
-  try {
-    await IAPService().initialize();
-  } catch (e) {
-    debugPrint('IAPService initialization error: $e');
   }
 }
