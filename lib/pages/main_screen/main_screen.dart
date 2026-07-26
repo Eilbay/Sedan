@@ -27,6 +27,7 @@ import 'package:optombai/widgets/utils/dropdown/home_dropdown.dart';
 import 'package:optombai/widgets/bottom_nav.dart';
 import 'package:optombai/utils/category_asset_resolver.dart';
 import 'package:optombai/data/mock/sedan_mock_listings.dart';
+import 'package:optombai/pages/main_screen/sedan_mock_details_page.dart';
 import 'package:auto_route/auto_route.dart';
 
 @RoutePage()
@@ -101,10 +102,20 @@ class _HomePageState extends State<HomePage>
   bool _isGridLayout =
       getIt<SharedPreferences>().getBool(_feedLayoutPrefKey) ?? true;
 
+  final Set<String> _savedMockListings = {};
+
   void _setFeedLayout(bool isGrid) {
     if (isGrid == _isGridLayout) return;
     setState(() => _isGridLayout = isGrid);
     getIt<SharedPreferences>().setBool(_feedLayoutPrefKey, isGrid);
+  }
+
+  void _toggleMockListingSaved(String categoryKey) {
+    setState(() {
+      if (!_savedMockListings.add(categoryKey)) {
+        _savedMockListings.remove(categoryKey);
+      }
+    });
   }
 
   @override
@@ -686,6 +697,8 @@ class _HomePageState extends State<HomePage>
                         listings: mockListings,
                         isDarkMode: isDarkMode,
                         isGridLayout: _isGridLayout,
+                        savedListings: _savedMockListings,
+                        onSavedTap: _toggleMockListingSaved,
                       ),
                     )
                   else if (search?.trim().isNotEmpty ?? false)
@@ -1208,26 +1221,27 @@ class _FeedLayoutToggle extends StatelessWidget {
     final Color trackColor =
         isDark ? const Color(0xFF1C1C1E) : const Color(0xFFEAF1FC);
 
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: trackColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _FeedLayoutToggleButton(
-            icon: Icons.grid_view_rounded,
-            isSelected: isGridLayout,
-            onTap: () => onChanged(true),
-          ),
-          _FeedLayoutToggleButton(
-            icon: Icons.view_list_rounded,
-            isSelected: !isGridLayout,
-            onTap: () => onChanged(false),
-          ),
-        ],
+    return Material(
+      color: trackColor,
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.all(3),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _FeedLayoutToggleButton(
+              icon: Icons.grid_view_rounded,
+              isSelected: isGridLayout,
+              onTap: () => onChanged(true),
+            ),
+            _FeedLayoutToggleButton(
+              icon: Icons.view_list_rounded,
+              isSelected: !isGridLayout,
+              onTap: () => onChanged(false),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1249,8 +1263,12 @@ class _FeedLayoutToggleButton extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(10),
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(6),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOut,
+        width: 34,
+        height: 34,
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: isSelected ? _HomePageState._accent : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
@@ -1270,16 +1288,21 @@ class _SedanMockListingsSliver extends StatelessWidget {
     required this.listings,
     required this.isDarkMode,
     required this.isGridLayout,
+    required this.savedListings,
+    required this.onSavedTap,
   });
 
   final List<SedanMockListing> listings;
   final bool isDarkMode;
   final bool isGridLayout;
+  final Set<String> savedListings;
+  final ValueChanged<String> onSavedTap;
 
   @override
   Widget build(BuildContext context) {
     if (isGridLayout) {
       return SliverGrid(
+        key: const ValueKey('sedan_mock_grid'),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           mainAxisSpacing: 16.h,
@@ -1290,6 +1313,8 @@ class _SedanMockListingsSliver extends StatelessWidget {
           (context, index) => _SedanHomeListingCard(
             listing: listings[index],
             isDarkMode: isDarkMode,
+            isSaved: savedListings.contains(listings[index].categoryKey),
+            onSavedTap: () => onSavedTap(listings[index].categoryKey),
           ),
           childCount: listings.length,
         ),
@@ -1297,13 +1322,19 @@ class _SedanMockListingsSliver extends StatelessWidget {
     }
 
     return SliverList(
+      key: const ValueKey('sedan_mock_list'),
       delegate: SliverChildBuilderDelegate(
         (context, index) => Padding(
           padding: EdgeInsets.only(bottom: 14.h),
-          child: _SedanHomeListingCard(
-            listing: listings[index],
-            isDarkMode: isDarkMode,
-            isWide: true,
+          child: SizedBox(
+            height: 360.h,
+            child: _SedanHomeListingCard(
+              listing: listings[index],
+              isDarkMode: isDarkMode,
+              isWide: true,
+              isSaved: savedListings.contains(listings[index].categoryKey),
+              onSavedTap: () => onSavedTap(listings[index].categoryKey),
+            ),
           ),
         ),
         childCount: listings.length,
@@ -1316,11 +1347,15 @@ class _SedanHomeListingCard extends StatelessWidget {
   const _SedanHomeListingCard({
     required this.listing,
     required this.isDarkMode,
+    required this.isSaved,
+    required this.onSavedTap,
     this.isWide = false,
   });
 
   final SedanMockListing listing;
   final bool isDarkMode;
+  final bool isSaved;
+  final VoidCallback onSavedTap;
   final bool isWide;
 
   @override
@@ -1334,11 +1369,13 @@ class _SedanHomeListingCard extends StatelessWidget {
         : const Color(0xFFE5E5E5);
 
     return GestureDetector(
-      onTap: () => context.router.push(ProductsRoute(
-        childId: listing.categoryKey,
-        title: categoryTitle,
-        mockCategoryKey: listing.categoryKey,
-      )),
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => SedanMockDetailsPage(listing: listing),
+          ),
+        );
+      },
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: bg,
@@ -1362,17 +1399,21 @@ class _SedanHomeListingCard extends StatelessWidget {
                     Positioned(
                       top: 8,
                       right: 8,
-                      child: Container(
-                        width: 34,
-                        height: 34,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.bookmark_border,
-                          color: Colors.black,
-                          size: 22,
+                      child: Material(
+                        color: isSaved ? _HomePageState._accent : Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          onTap: onSavedTap,
+                          child: SizedBox(
+                            width: 34,
+                            height: 34,
+                            child: Icon(
+                              isSaved ? Icons.bookmark : Icons.bookmark_border,
+                              color: isSaved ? Colors.white : Colors.black,
+                              size: 22,
+                            ),
+                          ),
                         ),
                       ),
                     ),

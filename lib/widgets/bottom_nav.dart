@@ -595,9 +595,18 @@ class _BottomNavState extends State<BottomNav>
                 return;
               }
               setState(() => _overlayRouteOpen = true);
-              await context.router.push(const ChatListRoute());
+              final targetIndex =
+                  await context.router.push<int>(const ChatListRoute());
               if (mounted) {
-                setState(() => _overlayRouteOpen = false);
+                setState(() {
+                  _overlayRouteOpen = false;
+                  if (targetIndex != null) {
+                    currentIndex = targetIndex;
+                  }
+                });
+                if (targetIndex != null && targetIndex >= 0) {
+                  unawaited(_prefs.setInt(LAST_BOTTOM_TAB_KEY, targetIndex));
+                }
               }
             },
           ),

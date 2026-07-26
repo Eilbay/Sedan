@@ -287,7 +287,12 @@ class _ProfileHeaderState extends State<ProfileHeader> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _ProfileAvatarRing(),
+        _ProfileAvatarRing(
+          imageUrl: user.image,
+          fallbackAsset: user.userType == 'auto_salon'
+              ? 'assets/icons/support_agent.jpg'
+              : null,
+        ),
         SizedBox(width: 14.w),
         Expanded(
           child: Column(
@@ -962,13 +967,26 @@ class _DescriptionWidgetState extends State<DescriptionWidget> {
 }
 
 class _ProfileAvatarRing extends StatelessWidget {
-  const _ProfileAvatarRing();
+  const _ProfileAvatarRing({
+    this.imageUrl,
+    this.fallbackAsset,
+  });
+
+  final String? imageUrl;
+  final String? fallbackAsset;
 
   @override
   Widget build(BuildContext context) {
     final isDark = context.select((ThemeNotifier n) => n.isDarkMode);
     final bg = isDark ? const Color(0xFF14181F) : const Color(0xFFF1F4F8);
     final fg = isDark ? Colors.white70 : Colors.grey.shade600;
+    final hasImageUrl = imageUrl != null && imageUrl!.trim().isNotEmpty;
+    ImageProvider<Object>? imageProvider;
+    if (hasImageUrl) {
+      imageProvider = CachedNetworkImageProvider(imageUrl!.ensureHttpsPrefix());
+    } else if (fallbackAsset != null) {
+      imageProvider = AssetImage(fallbackAsset!);
+    }
 
     return SizedBox(
       width: 92.w,
@@ -979,7 +997,16 @@ class _ProfileAvatarRing extends StatelessWidget {
           color: bg,
           border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
         ),
-        child: Icon(Icons.person, size: 48, color: fg),
+        child: ClipOval(
+          child: imageProvider != null
+              ? Image(
+                  image: imageProvider,
+                  width: 92.w,
+                  height: 92.w,
+                  fit: BoxFit.cover,
+                )
+              : Icon(Icons.person, size: 48, color: fg),
+        ),
       ),
     );
   }

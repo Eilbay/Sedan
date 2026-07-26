@@ -18,6 +18,7 @@ import 'package:optombai/widgets/shimmer/shimmer_product_grid.dart';
 import 'package:optombai/data/models/posts/post_model.dart';
 import 'package:optombai/data/mock/sedan_mock_listings.dart';
 import 'package:optombai/pages/main_screen/main_screen.dart';
+import 'package:optombai/pages/main_screen/sedan_mock_details_page.dart';
 import 'package:optombai/widgets/promotion/maybe_promoted_card.dart';
 import 'package:optombai/widgets/promotion/promotion_placement.dart';
 import 'package:optombai/pages/main_screen/order_screen.dart';
@@ -710,6 +711,7 @@ class _MockListingScaffold extends StatefulWidget {
 
 class _MockListingScaffoldState extends State<_MockListingScaffold> {
   String _search = '';
+  bool _isSaved = false;
 
   bool get _matchesSearch {
     final query = _search.trim().toLowerCase();
@@ -793,6 +795,9 @@ class _MockListingScaffoldState extends State<_MockListingScaffold> {
                       ? _MockListingCard(
                           listing: widget.listing,
                           isDarkMode: widget.isDarkMode,
+                          isSaved: _isSaved,
+                          onSavedTap: () =>
+                              setState(() => _isSaved = !_isSaved),
                         )
                       : EmptyComment(
                           subTitle: 'В выбранной категории товары отсутствуют',
@@ -870,10 +875,14 @@ class _MockListingCard extends StatelessWidget {
   const _MockListingCard({
     required this.listing,
     required this.isDarkMode,
+    required this.isSaved,
+    required this.onSavedTap,
   });
 
   final SedanMockListing listing;
   final bool isDarkMode;
+  final bool isSaved;
+  final VoidCallback onSavedTap;
 
   @override
   Widget build(BuildContext context) {
@@ -884,79 +893,116 @@ class _MockListingCard extends StatelessWidget {
         ? Colors.white.withValues(alpha: 0.10)
         : const Color(0xFFE8E8E8);
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: borderColor),
-        boxShadow: isDarkMode
-            ? null
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.07),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => SedanMockDetailsPage(listing: listing),
+          ),
+        );
+      },
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: borderColor),
+          boxShadow: isDarkMode
+              ? null
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.07),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(14)),
+              child: AspectRatio(
+                aspectRatio: 1.65,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.asset(
+                      listing.imageAsset,
+                      fit: BoxFit.cover,
+                    ),
+                    Positioned(
+                      top: 12,
+                      right: 12,
+                      child: Material(
+                        color: isSaved ? const Color(0xFF007AFF) : Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          onTap: onSavedTap,
+                          child: SizedBox(
+                            width: 38,
+                            height: 38,
+                            child: Icon(
+                              isSaved ? Icons.bookmark : Icons.bookmark_border,
+                              color: isSaved ? Colors.white : Colors.black,
+                              size: 24,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-            child: AspectRatio(
-              aspectRatio: 1.65,
-              child: Image.asset(
-                listing.imageAsset,
-                fit: BoxFit.cover,
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  listing.title,
-                  style: TextStyle(
-                    color: fg,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                ...listing.specs.map(
-                  (spec) => Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: _MockSpecRow(
-                      label: spec.label,
-                      value: spec.value,
-                      fg: fg,
-                      sub: sub,
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    listing.title,
+                    style: TextStyle(
+                      color: fg,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                _MockSpecRow(
-                  label: 'Состояние',
-                  value: listing.condition,
-                  fg: fg,
-                  sub: sub,
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  listing.price,
-                  style: const TextStyle(
-                    color: Color(0xFF007AFF),
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
+                  const SizedBox(height: 10),
+                  ...listing.specs.map(
+                    (spec) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: _MockSpecRow(
+                        label: spec.label,
+                        value: spec.value,
+                        fg: fg,
+                        sub: sub,
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 2),
+                  _MockSpecRow(
+                    label: 'Состояние',
+                    value: listing.condition,
+                    fg: fg,
+                    sub: sub,
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    listing.price,
+                    style: const TextStyle(
+                      color: Color(0xFF007AFF),
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
