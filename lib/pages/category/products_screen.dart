@@ -712,6 +712,7 @@ class _MockListingScaffold extends StatefulWidget {
 class _MockListingScaffoldState extends State<_MockListingScaffold> {
   String _search = '';
   bool _isSaved = false;
+  bool _isGridLayout = true;
 
   bool get _matchesSearch {
     final query = _search.trim().toLowerCase();
@@ -789,23 +790,63 @@ class _MockListingScaffoldState extends State<_MockListingScaffold> {
                 ),
               ),
               SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 15),
+                padding: const EdgeInsets.fromLTRB(15, 0, 15, 14),
                 sliver: SliverToBoxAdapter(
-                  child: _matchesSearch
-                      ? _MockListingCard(
-                          listing: widget.listing,
-                          isDarkMode: widget.isDarkMode,
-                          isSaved: _isSaved,
-                          onSavedTap: () =>
-                              setState(() => _isSaved = !_isSaved),
-                        )
-                      : EmptyComment(
-                          subTitle: 'В выбранной категории товары отсутствуют',
-                          image: 'assets/icons/korzinka.png',
-                          height: 190.h,
-                        ),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: _MockLayoutToggle(
+                      isGridLayout: _isGridLayout,
+                      onChanged: (value) =>
+                          setState(() => _isGridLayout = value),
+                    ),
+                  ),
                 ),
               ),
+              if (!_matchesSearch)
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 15),
+                  sliver: SliverToBoxAdapter(
+                    child: EmptyComment(
+                      subTitle: 'В выбранной категории товары отсутствуют',
+                      image: 'assets/icons/korzinka.png',
+                      height: 190.h,
+                    ),
+                  ),
+                )
+              else if (_isGridLayout)
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 15),
+                  sliver: SliverGrid(
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 16.h,
+                      crossAxisSpacing: 12.w,
+                      mainAxisExtent: 300.h,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) => _MockListingCard(
+                        listing: widget.listing,
+                        isDarkMode: widget.isDarkMode,
+                        isSaved: _isSaved,
+                        isCompact: true,
+                        onSavedTap: () => setState(() => _isSaved = !_isSaved),
+                      ),
+                      childCount: 1,
+                    ),
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 15),
+                  sliver: SliverToBoxAdapter(
+                    child: _MockListingCard(
+                      listing: widget.listing,
+                      isDarkMode: widget.isDarkMode,
+                      isSaved: _isSaved,
+                      onSavedTap: () => setState(() => _isSaved = !_isSaved),
+                    ),
+                  ),
+                ),
               SliverToBoxAdapter(
                 child: SizedBox(
                   height: kBottomNavigationBarHeight +
@@ -871,18 +912,97 @@ class _MockSearchField extends StatelessWidget {
   }
 }
 
+class _MockLayoutToggle extends StatelessWidget {
+  const _MockLayoutToggle({
+    required this.isGridLayout,
+    required this.onChanged,
+  });
+
+  final bool isGridLayout;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDarkMode = context.select((ThemeNotifier n) => n.isDarkMode);
+    final trackColor =
+        isDarkMode ? const Color(0xFF1C1C1E) : const Color(0xFFEAF1FC);
+
+    return Material(
+      color: trackColor,
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.all(3),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _MockLayoutToggleButton(
+              icon: Icons.grid_view_rounded,
+              isSelected: isGridLayout,
+              onTap: () => onChanged(true),
+            ),
+            _MockLayoutToggleButton(
+              icon: Icons.view_list_rounded,
+              isSelected: !isGridLayout,
+              onTap: () => onChanged(false),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MockLayoutToggleButton extends StatelessWidget {
+  const _MockLayoutToggleButton({
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOut,
+        width: 34,
+        height: 34,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF007AFF) : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: isSelected ? Colors.white : Colors.grey,
+        ),
+      ),
+    );
+  }
+}
+
 class _MockListingCard extends StatelessWidget {
   const _MockListingCard({
     required this.listing,
     required this.isDarkMode,
     required this.isSaved,
     required this.onSavedTap,
+    this.isCompact = false,
   });
 
   final SedanMockListing listing;
   final bool isDarkMode;
   final bool isSaved;
   final VoidCallback onSavedTap;
+  final bool isCompact;
 
   @override
   Widget build(BuildContext context) {
@@ -893,15 +1013,131 @@ class _MockListingCard extends StatelessWidget {
         ? Colors.white.withValues(alpha: 0.10)
         : const Color(0xFFE8E8E8);
 
+    void openDetails() {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => SedanMockDetailsPage(listing: listing),
+        ),
+      );
+    }
+
+    if (isCompact) {
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: openDetails,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: borderColor),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 5,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.asset(
+                        listing.imageAsset,
+                        fit: BoxFit.cover,
+                      ),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Material(
+                          color:
+                              isSaved ? const Color(0xFF007AFF) : Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          clipBehavior: Clip.antiAlias,
+                          child: InkWell(
+                            onTap: onSavedTap,
+                            child: SizedBox(
+                              width: 34,
+                              height: 34,
+                              child: Icon(
+                                isSaved
+                                    ? Icons.bookmark
+                                    : Icons.bookmark_border,
+                                color: isSaved ? Colors.white : Colors.black,
+                                size: 22,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  flex: 5,
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          listing.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: fg,
+                            fontSize: 15,
+                            height: 1.15,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        SizedBox(height: 8.h),
+                        Text(
+                          listing.condition,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: sub,
+                            fontSize: 12,
+                            height: 1.25,
+                          ),
+                        ),
+                        SizedBox(height: 8.h),
+                        Text(
+                          listing.price,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFF007AFF),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const Spacer(),
+                        Row(
+                          children: [
+                            Icon(Icons.location_on_outlined,
+                                color: sub, size: 16),
+                            SizedBox(width: 4.w),
+                            Text(
+                              'Бишкек',
+                              style: TextStyle(color: sub, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => SedanMockDetailsPage(listing: listing),
-          ),
-        );
-      },
+      onTap: openDetails,
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: cardColor,

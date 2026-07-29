@@ -434,15 +434,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _tabContent(BuildContext context) {
     if (currentIndex == 0) {
       final listings = sedanMockListings.take(2).toList();
-      return Column(
-        children: listings
-            .map(
-              (listing) => Padding(
-                padding: EdgeInsets.only(top: 14.h),
-                child: _mockProductCard(context, listing),
-              ),
-            )
-            .toList(),
+      final isDark = context.select((ThemeNotifier n) => n.isDarkMode);
+      return Padding(
+        padding: EdgeInsets.only(top: 14.h),
+        child: GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: listings.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 12.h,
+            crossAxisSpacing: 12.w,
+            mainAxisExtent: 300.h,
+          ),
+          itemBuilder: (context, index) => _mockProductCard(
+            context,
+            listings[index],
+            isDarkMode: isDark,
+            isCompact: true,
+          ),
+        ),
       );
     } else if (currentIndex == 1) {
       const bool isCurrentUser = true;
@@ -492,15 +503,109 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return const SizedBox();
   }
 
-  Widget _mockProductCard(BuildContext context, SedanMockListing listing) {
-    final isDark = context.select((ThemeNotifier n) => n.isDarkMode);
-    final cardColor = isDark ? _darkCard : Colors.white;
+  Widget _mockProductCard(
+    BuildContext context,
+    SedanMockListing listing, {
+    required bool isDarkMode,
+    bool isCompact = false,
+  }) {
+    final cardColor = isDarkMode ? _darkCard : Colors.white;
     final borderColor =
-        (isDark ? Colors.white : Colors.black).withValues(alpha: 0.08);
-    final subColor = isDark ? Colors.white60 : Colors.black54;
+        (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.08);
+    final subColor = isDarkMode ? Colors.white60 : Colors.black54;
 
     final year = listing.specs.isNotEmpty ? listing.specs.first.value : '';
     final engine = listing.specs.length > 1 ? listing.specs[1].value : '';
+
+    if (isCompact) {
+      return Material(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(12),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => _MockListingDetailsPage(listing: listing),
+              ),
+            );
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: borderColor),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 5,
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Image.asset(
+                      listing.imageAsset,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 5,
+                  child: Padding(
+                    padding: EdgeInsets.all(10.w),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          listing.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            height: 1.15,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        SizedBox(height: 8.h),
+                        Text(
+                          [year, engine]
+                              .where((value) => value.isNotEmpty)
+                              .join(' · '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: subColor, fontSize: 12),
+                        ),
+                        SizedBox(height: 8.h),
+                        Text(
+                          listing.condition,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: subColor,
+                            fontSize: 12,
+                            height: 1.25,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          listing.price,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFF2F80ED),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Material(
       color: cardColor,
