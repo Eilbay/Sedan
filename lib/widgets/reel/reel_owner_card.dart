@@ -187,12 +187,19 @@ class ReelOwnerCard extends StatelessWidget {
           ],
           if (isPromoted) SizedBox(height: 8.h),
           if (isPromoted)
-            Text(
-              'Реклама',
-              style: TextStyle(
-                fontSize: 10.sp,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.55),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'Реклама',
+                style: TextStyle(
+                  fontSize: 10.sp,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                ),
               ),
             ),
         ],

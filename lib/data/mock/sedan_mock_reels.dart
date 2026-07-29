@@ -39,6 +39,7 @@ final sedanMockReels = <ReelModel>[
     owner: _owner,
     likes: 0,
     isLiked: false,
+    cardType: 'promo',
   ),
   ReelModel(
     id: 'sedan_mock_kia_morning_2020',

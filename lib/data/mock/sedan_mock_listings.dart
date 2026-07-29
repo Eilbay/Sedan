@@ -5,6 +5,7 @@ class SedanMockListing {
   final String price;
   final List<SedanMockSpec> specs;
   final String condition;
+  final bool isVip;
 
   const SedanMockListing({
     required this.categoryKey,
@@ -13,6 +14,7 @@ class SedanMockListing {
     required this.price,
     required this.specs,
     required this.condition,
+    this.isVip = false,
   });
 }
 
@@ -35,6 +37,7 @@ const sedanMockListings = <SedanMockListing>[
     ],
     condition:
         'Отличное, без вложений. Автомобиль полностью обслужен, чистый и ухоженный салон.',
+    isVip: true,
   ),
   SedanMockListing(
     categoryKey: 'suv',
@@ -47,6 +50,7 @@ const sedanMockListings = <SedanMockListing>[
       SedanMockSpec('КПП', 'Автомат'),
     ],
     condition: 'Отличное, полностью обслужен, без вложений.',
+    isVip: true,
   ),
   SedanMockListing(
     categoryKey: 'commercial',
@@ -59,6 +63,7 @@ const sedanMockListings = <SedanMockListing>[
       SedanMockSpec('КПП', 'Механика'),
     ],
     condition: 'Отличное, полностью обслужен, без вложений. Готов к работе.',
+    isVip: true,
   ),
   SedanMockListing(
     categoryKey: 'motorcycle',
@@ -72,6 +77,7 @@ const sedanMockListings = <SedanMockListing>[
     ],
     condition:
         'Отличное, без пробега по Кыргызстану, полностью готов к эксплуатации.',
+    isVip: true,
   ),
   SedanMockListing(
     categoryKey: 'parts',
@@ -83,6 +89,7 @@ const sedanMockListings = <SedanMockListing>[
       SedanMockSpec('Категория', 'Трансмиссия / Подшипники / Шестерни'),
     ],
     condition: 'Новые, оригинальное качество.',
+    isVip: true,
   ),
   SedanMockListing(
     categoryKey: 'service',
@@ -94,6 +101,7 @@ const sedanMockListings = <SedanMockListing>[
       SedanMockSpec('Материалы', 'Профессиональные лакокрасочные материалы'),
     ],
     condition: 'Качественное выполнение работ, гарантия результата.',
+    isVip: true,
   ),
 ];
 

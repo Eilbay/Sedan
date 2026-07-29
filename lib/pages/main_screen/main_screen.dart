@@ -1439,6 +1439,12 @@ class _SedanHomeListingCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (listing.isVip)
+                      const Positioned(
+                        left: 8,
+                        top: 8,
+                        child: VipBadgeNew(),
+                      ),
                   ],
                 ),
               ),
