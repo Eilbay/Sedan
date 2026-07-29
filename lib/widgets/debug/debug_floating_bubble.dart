@@ -1,4 +1,3 @@
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:optombai/app/router/app_router.dart';
@@ -35,19 +34,15 @@ class _DebugFloatingBubbleState extends State<DebugFloatingBubble> {
     HapticFeedback.heavyImpact();
     talker.warning(
       '[TEST-CRASH] manually triggered from debug bubble — '
-      'sending to Crashlytics + forcing native crash',
+      'Firebase is disabled in mock mode',
     );
-    // Non-fatal report (in case the native crash below fails to upload).
-    try {
-      FirebaseCrashlytics.instance.recordError(
-        Exception('Manual test crash from debug bubble'),
-        StackTrace.current,
-        reason: 'TEST_CRASH (manual)',
-        fatal: true,
-      );
-    } catch (_) {}
-    // Native crash — Crashlytics native handler picks this up on next launch.
-    FirebaseCrashlytics.instance.crash();
+    FlutterError.reportError(
+      FlutterErrorDetails(
+        exception: Exception('Manual test crash from debug bubble'),
+        stack: StackTrace.current,
+        library: 'debug',
+      ),
+    );
   }
 
   @override
@@ -75,7 +70,7 @@ class _DebugFloatingBubbleState extends State<DebugFloatingBubble> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // Smaller red button above the main bubble — tap to force
-              // a Crashlytics crash so the dashboard activates. Dev only
+              // a local test error. Dev only
               // (only visible when the 10-tap debug unlock is active).
               GestureDetector(
                 onTap: _triggerTestCrash,

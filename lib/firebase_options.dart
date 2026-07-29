@@ -53,7 +53,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyBN3bRlOJOm_CFaYa5cVKT0Qlug3cWOaKs',
-    appId: '1:291812609091:android:6c9f69493455ccc42958f6',
+    appId: '1:291812609091:android:d879bc17a329528b2958f6',
     messagingSenderId: '291812609091',
     projectId: 'elba-d9541',
     databaseURL: 'https://elba-d9541-default-rtdb.asia-southeast1.firebasedatabase.app',

@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/widgets.dart';
 import 'package:optombai/core/debug/talker_instance.dart';
 import 'package:optombai/core/di/injection.dart';
@@ -50,23 +49,6 @@ class AppLifecycleLogger extends WidgetsBindingObserver {
           'Inspect the tail of the previous log file for the last '
           'event before death.',
         );
-        // iOS background-eviction kills do NOT trigger SIGABRT, so
-        // Crashlytics native handler never sees them. Surface as a
-        // **fatal** report (fatal=true) so Crashlytics flushes it
-        // immediately at next launch instead of batching with the
-        // non-fatal queue (which often gets dropped on iOS).
-        try {
-          FirebaseCrashlytics.instance.recordError(
-            Exception(
-              'Previous session ended without clean shutdown marker '
-              '— likely iOS background eviction or OOM kill.',
-            ),
-            StackTrace.current,
-            reason: 'ErrorSource.postmortem',
-            fatal: true,
-          );
-          FirebaseCrashlytics.instance.sendUnsentReports();
-        } catch (_) {}
       } else {
         talker.info('[STARTUP] previous session shut down cleanly');
       }

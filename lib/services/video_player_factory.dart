@@ -22,28 +22,40 @@ class VideoPlayerFactory implements IPlayerFactory {
     allowBackgroundPlayback: false,
   );
 
+  VideoPlayerController _createController(
+    String url, {
+    required VideoPlayerOptions options,
+  }) {
+    if (url.startsWith('assets/')) {
+      return VideoPlayerController.asset(
+        url,
+        videoPlayerOptions: options,
+      );
+    }
+
+    return VideoPlayerController.networkUrl(
+      Uri.parse(url),
+      videoPlayerOptions: options,
+    );
+  }
+
   @override
   VideoPlayerController createReelPlayer(String url) {
-    final controller = VideoPlayerController.networkUrl(
-      Uri.parse(url),
-      videoPlayerOptions: _reelOptions,
-    );
+    final controller = _createController(url, options: _reelOptions);
     // `setLooping` and `setVolume` return Futures we deliberately don't await.
     // They are no-ops at the platform layer until `initialize()` completes, but
     // they DO update the in-memory `value.isLooping` / `value.volume`, which
     // video_player re-applies once initialized. This pre-seeds the desired
     // state without requiring callers to await anything.
     unawaited(controller.setLooping(true));
-    unawaited(controller.setVolume(0)); // muted by default — ReelPlaybackManager unmutes
+    unawaited(controller
+        .setVolume(0)); // muted by default — ReelPlaybackManager unmutes
     return controller;
   }
 
   @override
   VideoPlayerController createPreBufferPlayer(String url) {
-    final controller = VideoPlayerController.networkUrl(
-      Uri.parse(url),
-      videoPlayerOptions: _reelOptions,
-    );
+    final controller = _createController(url, options: _reelOptions);
     unawaited(controller.setLooping(true));
     unawaited(controller.setVolume(0));
     return controller;
@@ -53,19 +65,13 @@ class VideoPlayerFactory implements IPlayerFactory {
   /// dispose() when off-screen).
   @override
   VideoPlayerController createPreviewPlayer(String url) {
-    final controller = VideoPlayerController.networkUrl(
-      Uri.parse(url),
-      videoPlayerOptions: _reelOptions,
-    );
+    final controller = _createController(url, options: _reelOptions);
     unawaited(controller.setVolume(0));
     return controller;
   }
 
   @override
   VideoPlayerController createViewerPlayer(String url) {
-    return VideoPlayerController.networkUrl(
-      Uri.parse(url),
-      videoPlayerOptions: _viewerOptions,
-    );
+    return _createController(url, options: _viewerOptions);
   }
 }

@@ -4,6 +4,7 @@ import 'package:optombai/configs/constrants.dart';
 import 'package:optombai/core/debug/talker_instance.dart';
 import 'package:optombai/core/error/app_exception.dart';
 import 'package:optombai/core/error/reel_log_file.dart';
+import 'package:optombai/data/mock/sedan_mock_reels.dart';
 import 'package:optombai/data/models/reel/reel_model.dart';
 import 'package:optombai/data/repositories/i_reel_repository.dart';
 import 'package:optombai/services/reel_metadata_cache.dart';
@@ -56,6 +57,8 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
 
   String getToken() => preferences.getString(TOKEN_KEY) ?? "";
 
+  bool get _useSedanMockReels => true;
+
   /// Logs a reel-feed diagnostic event to both the general Talker log and
   /// the dedicated `reel_log.txt` — the latter keeps reel events easy to
   /// find instead of buried under the much higher-volume HTTP/lifecycle
@@ -70,9 +73,25 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
   }
 
   void _onLoadCachedReels(LoadCachedReelsEvent event, Emitter<ReelState> emit) {
+    if (_useSedanMockReels) {
+      final reelList = sedanMockReelList();
+      _logReelEvent(
+          '[REEL-FEED] using ${reelList.results.length} sedan mock reels instead of cache');
+      emit(state.copyWith(
+        isSuccess: true,
+        reels: reelList.results,
+        isLoading: false,
+        nextPageUrl: null,
+        hasReachedEnd: true,
+        errors: const [],
+      ));
+      return;
+    }
+
     final cached = _metadataCache.loadCached();
     if (cached != null && cached.results.isNotEmpty) {
-      _logReelEvent('[REEL-FEED] loaded ${cached.results.length} reels from local cache');
+      _logReelEvent(
+          '[REEL-FEED] loaded ${cached.results.length} reels from local cache');
       emit(state.copyWith(
         isSuccess: true,
         reels: cached.results,
@@ -83,6 +102,21 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
   }
 
   Future<void> _onFetchReels(FetchReelsEvent event, emit) async {
+    if (_useSedanMockReels) {
+      final reelList = sedanMockReelList();
+      _logReelEvent(
+          '[REEL-FEED] using ${reelList.results.length} sedan mock reels');
+      emit(state.copyWith(
+        isSuccess: true,
+        reels: reelList.results,
+        isLoading: false,
+        nextPageUrl: null,
+        hasReachedEnd: true,
+        errors: const [],
+      ));
+      return;
+    }
+
     if (!event.forceRefresh && state.reels.isNotEmpty) {
       _logReelEvent(
           '[REEL-FEED] skip fetch — already have ${state.reels.length} reels cached');
@@ -147,6 +181,20 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
     FilterReelsByCategoryEvent event,
     Emitter<ReelState> emit,
   ) async {
+    if (_useSedanMockReels) {
+      final reelList = sedanMockReelList();
+      emit(state.copyWith(
+        categoryId: event.categoryId,
+        isSuccess: true,
+        reels: reelList.results,
+        isLoading: false,
+        nextPageUrl: null,
+        hasReachedEnd: true,
+        errors: const [],
+      ));
+      return;
+    }
+
     // Ignore if the same filter is already applied.
     if (event.categoryId == state.categoryId) return;
 
@@ -189,7 +237,14 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
   }
 
   Future<void> _onFetchMoreReels(FetchMoreReelsEvent event, emit) async {
-    if (state.isLoadingMore || state.hasReachedEnd || state.nextPageUrl == null) {
+    if (_useSedanMockReels) {
+      emit(state.copyWith(isLoadingMore: false, hasReachedEnd: true));
+      return;
+    }
+
+    if (state.isLoadingMore ||
+        state.hasReachedEnd ||
+        state.nextPageUrl == null) {
       return;
     }
 
@@ -225,6 +280,11 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
   }
 
   Future<void> _onLikeReel(LikeReelEvent event, emit) async {
+    if (isSedanMockReelId(event.reelId)) {
+      emit(state.setLiked(event.reelId, isLiked: true));
+      return;
+    }
+
     try {
       emit(state.setLiked(event.reelId, isLiked: true));
 
@@ -236,6 +296,11 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
   }
 
   Future<void> _onUnlikeReel(UnlikeReelEvent event, emit) async {
+    if (isSedanMockReelId(event.reelId)) {
+      emit(state.setLiked(event.reelId, isLiked: false));
+      return;
+    }
+
     try {
       emit(state.setLiked(event.reelId, isLiked: false));
 
@@ -247,6 +312,11 @@ class ReelBloc extends Bloc<ReelEvent, ReelState> {
   }
 
   Future<void> _onRegisterView(RegisterViewEvent event, emit) async {
+    if (isSedanMockReelId(event.reelId)) {
+      emit(state.incrementViews(event.reelId));
+      return;
+    }
+
     final token = getToken();
     if (token.isEmpty) return;
 

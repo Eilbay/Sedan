@@ -32,6 +32,7 @@ import 'package:optombai/core/debug/debug_overlay_controller.dart';
 import 'package:optombai/features/notifications/presentation/logic/notifications_cubit.dart';
 import 'package:optombai/pages/main_screen/main_screen.dart';
 import 'package:optombai/widgets/app_bottom_bar.dart';
+import 'package:optombai/widgets/app_scaffold/bazarlar_app_scaffold.dart';
 import 'package:optombai/widgets/auth/inline_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -482,10 +483,7 @@ class _BottomNavState extends State<BottomNav>
       if (showCart) const CartScreen(),
       hasToken
           ? ProfileScreen(userId: userId, username: username)
-          : Scaffold(
-              appBar: AppBar(title: const Text('Профиль')),
-              body: const InlineSignIn(),
-            ),
+          : const BazarlarAppScaffold(child: InlineSignIn()),
     ];
 
     // ignore: dead_code
@@ -597,9 +595,18 @@ class _BottomNavState extends State<BottomNav>
                 return;
               }
               setState(() => _overlayRouteOpen = true);
-              await context.router.push(const ChatListRoute());
+              final targetIndex =
+                  await context.router.push<int>(const ChatListRoute());
               if (mounted) {
-                setState(() => _overlayRouteOpen = false);
+                setState(() {
+                  _overlayRouteOpen = false;
+                  if (targetIndex != null) {
+                    currentIndex = targetIndex;
+                  }
+                });
+                if (targetIndex != null && targetIndex >= 0) {
+                  unawaited(_prefs.setInt(LAST_BOTTOM_TAB_KEY, targetIndex));
+                }
               }
             },
           ),

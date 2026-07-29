@@ -1978,10 +1978,16 @@ class ProductsRoute extends PageRouteInfo<ProductsRouteArgs> {
     Key? key,
     required String childId,
     required String title,
+    String? mockCategoryKey,
     List<PageRouteInfo>? children,
   }) : super(
           ProductsRoute.name,
-          args: ProductsRouteArgs(key: key, childId: childId, title: title),
+          args: ProductsRouteArgs(
+            key: key,
+            childId: childId,
+            title: title,
+            mockCategoryKey: mockCategoryKey,
+          ),
           initialChildren: children,
         );
 
@@ -1995,6 +2001,7 @@ class ProductsRoute extends PageRouteInfo<ProductsRouteArgs> {
         key: args.key,
         childId: args.childId,
         title: args.title,
+        mockCategoryKey: args.mockCategoryKey,
       );
     },
   );
@@ -2005,6 +2012,7 @@ class ProductsRouteArgs {
     this.key,
     required this.childId,
     required this.title,
+    this.mockCategoryKey,
   });
 
   final Key? key;
@@ -2013,20 +2021,29 @@ class ProductsRouteArgs {
 
   final String title;
 
+  final String? mockCategoryKey;
+
   @override
   String toString() {
-    return 'ProductsRouteArgs{key: $key, childId: $childId, title: $title}';
+    return 'ProductsRouteArgs{key: $key, childId: $childId, title: $title, mockCategoryKey: $mockCategoryKey}';
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (other is! ProductsRouteArgs) return false;
-    return key == other.key && childId == other.childId && title == other.title;
+    return key == other.key &&
+        childId == other.childId &&
+        title == other.title &&
+        mockCategoryKey == other.mockCategoryKey;
   }
 
   @override
-  int get hashCode => key.hashCode ^ childId.hashCode ^ title.hashCode;
+  int get hashCode =>
+      key.hashCode ^
+      childId.hashCode ^
+      title.hashCode ^
+      mockCategoryKey.hashCode;
 }
 
 /// generated route for

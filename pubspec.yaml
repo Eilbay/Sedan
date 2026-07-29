@@ -126,6 +126,10 @@ flutter:
   uses-material-design: true
   assets:
     - assets/
+    - assets/sedan/
+    - assets/sedan/category/
+    - assets/sedan/mock/
+    - assets/sedan/videos/
     - assets/slider/
     - assets/flags/
     - assets/types/

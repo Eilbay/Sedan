@@ -61,7 +61,6 @@ import 'package:showcaseview/showcaseview.dart';
 
 import 'package:optombai/bloc/category_bloc/category_bloc.dart';
 import 'package:optombai/bloc/country_bloc/country_bloc.dart';
-import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:optombai/core/di/injection.dart';
 import 'package:optombai/services/chat/chat_resolver.dart';
 import 'package:optombai/core/theme_notifier.dart';
@@ -643,8 +642,6 @@ class _MyAppState extends State<MyApp> {
                   routerConfig: _appRouter.config(
                     navigatorObservers: () => [
                       appRouteObserver,
-                      FirebaseAnalyticsObserver(
-                          analytics: FirebaseAnalytics.instance),
                     ],
                   ),
                   debugShowCheckedModeBanner: false,

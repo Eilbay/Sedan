@@ -1,69 +1,28 @@
 import 'dart:async';
-import 'package:firebase_database/firebase_database.dart';
 
 class FirebaseService {
   static final FirebaseService _instance = FirebaseService._internal();
   factory FirebaseService() => _instance;
   FirebaseService._internal();
 
-  final DatabaseReference _databaseRef = FirebaseDatabase.instance.ref();
-  StreamSubscription<DatabaseEvent>? _subscription;
+  bool _isButtonVisible = false;
+  final Map<String, bool> _featureFlags = const {};
 
   Stream<bool> listenToButtonVisibility() {
-    return _databaseRef.child('isButtonVisible').onValue.map((event) {
-      if (event.snapshot.exists) {
-        return event.snapshot.value as bool? ?? false;
-      }
-      return false;
-    });
+    return Stream<bool>.value(_isButtonVisible);
   }
 
-  Future<bool> getButtonVisibility() async {
-    try {
-      final snapshot = await _databaseRef.child('isButtonVisible').get();
-      if (snapshot.exists) {
-        return snapshot.value as bool? ?? false;
-      }
-      return false;
-    } catch (e) {
-      throw Exception('Failed to get button visibility: $e');
-    }
-  }
+  Future<bool> getButtonVisibility() async => _isButtonVisible;
 
   Future<void> setButtonVisibility(bool isVisible) async {
-    try {
-      await _databaseRef.child('isButtonVisible').set(isVisible);
-    } catch (e) {
-      throw Exception('Failed to set button visibility: $e');
-    }
+    _isButtonVisible = isVisible;
   }
 
-  /// Generic remote toggles for hiding a feature without an app release.
-  /// Each flag lives at `featureFlags/<key>`; a missing key means hidden,
-  /// matching the [getButtonVisibility] convention above.
   Stream<Map<String, bool>> listenToFeatureFlags() {
-    return _databaseRef.child('featureFlags').onValue.map((event) {
-      return _parseFeatureFlags(event.snapshot);
-    });
+    return Stream<Map<String, bool>>.value(_featureFlags);
   }
 
-  Future<Map<String, bool>> getFeatureFlags() async {
-    try {
-      final snapshot = await _databaseRef.child('featureFlags').get();
-      return _parseFeatureFlags(snapshot);
-    } catch (e) {
-      throw Exception('Failed to get feature flags: $e');
-    }
-  }
+  Future<Map<String, bool>> getFeatureFlags() async => _featureFlags;
 
-  Map<String, bool> _parseFeatureFlags(DataSnapshot snapshot) {
-    if (!snapshot.exists) return const {};
-    final raw = snapshot.value;
-    if (raw is! Map) return const {};
-    return raw.map((key, value) => MapEntry(key.toString(), value == true));
-  }
-
-  void dispose() {
-    _subscription?.cancel();
-  }
+  void dispose() {}
 }

@@ -13,6 +13,7 @@ import 'package:optombai/configs/constrants.dart';
 import 'package:optombai/core/debug/talker_instance.dart';
 import 'package:optombai/bloc/user_bloc/user_bloc.dart';
 import 'package:optombai/core/theme_notifier.dart';
+import 'package:optombai/data/mock/sedan_mock_reels.dart';
 import 'package:optombai/data/models/favorite/favorite_model.dart';
 import 'package:optombai/data/models/posts/post_model.dart';
 import 'package:optombai/data/models/reel/reel_model.dart';
@@ -301,6 +302,11 @@ class _ReelsViewerScreenState extends State<ReelsViewerScreen>
   int _wrap(int rawIndex, int len) =>
       len == 0 ? 0 : ((rawIndex % len) + len) % len;
 
+  bool _usesMockReels(List<ReelModel> reels) {
+    return reels.isNotEmpty &&
+        reels.every((reel) => isSedanMockReelId(reel.id));
+  }
+
   void _clampCurrentIndex(List<ReelModel> reels) {
     if (reels.isEmpty) {
       _currentIndex = 0;
@@ -469,13 +475,16 @@ class _ReelsViewerScreenState extends State<ReelsViewerScreen>
               );
             }
             _clampCurrentIndex(reels);
+            final usesMockReels = _usesMockReels(reels);
 
             return SizedBox.expand(
               child: PageView.builder(
                 controller: _pageController,
                 scrollDirection: Axis.vertical,
-                // null itemCount = infinite scroll. Once the user reaches
-                // the last reel, swiping down keeps going and wraps back
+                itemCount: usesMockReels ? reels.length : null,
+                // API reels keep the old infinite scroll (`itemCount == null`).
+                // Mock reels are finite so the 6 local videos don't repeat.
+                // In infinite mode, swiping past the last reel wraps back
                 // to the first via `_wrap(index, reels.length)`. The
                 // backend already de-dupes already-viewed reels server
                 // side, so once it stops returning new ones we keep
@@ -528,6 +537,7 @@ class _ReelsViewerScreenState extends State<ReelsViewerScreen>
                         reel: updatedReel,
                         controller: _playback.players[index],
                         isInitialized: _playback.initialized[index] ?? false,
+                        errorMessage: _playback.errors[index],
                         isProcessed: updatedReel.isProcessed,
                         coverUrl:
                             updatedReel.coverMediumUrl ?? updatedReel.coverUrl,
@@ -653,12 +663,14 @@ class _ReelActionButton extends StatelessWidget {
 class _ReelVideoPlayer extends StatefulWidget {
   final VideoPlayerController? controller;
   final bool isInitialized;
+  final String? errorMessage;
   final bool isProcessed;
   final String? coverUrl;
 
   const _ReelVideoPlayer({
     required this.controller,
     required this.isInitialized,
+    this.errorMessage,
     this.isProcessed = true,
     this.coverUrl,
   });
@@ -880,7 +892,9 @@ class _ReelVideoPlayerState extends State<_ReelVideoPlayer> {
 
         // Loading indicator — debounced 1s so cover image shows first.
         if (!hasController || !widget.isInitialized)
-          if (!widget.isProcessed)
+          if (widget.errorMessage != null)
+            Center(child: _buildErrorBadge(widget.errorMessage!))
+          else if (!widget.isProcessed)
             Center(child: _buildProcessingBadge())
           else if (_showLoading)
             const Center(
@@ -930,6 +944,22 @@ class _ReelVideoPlayerState extends State<_ReelVideoPlayer> {
             style: TextStyle(color: Colors.white70, fontSize: 14),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildErrorBadge(String message) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.black54,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        'Видео не открылось\n$message',
+        textAlign: TextAlign.center,
+        style: const TextStyle(color: Colors.white70, fontSize: 13),
       ),
     );
   }
@@ -1153,6 +1183,7 @@ class _ReelPage extends StatelessWidget {
   final ReelModel reel;
   final VideoPlayerController? controller;
   final bool isInitialized;
+  final String? errorMessage;
   final bool isProcessed;
   final String? coverUrl;
   final bool isProductVideo;
@@ -1172,6 +1203,7 @@ class _ReelPage extends StatelessWidget {
     required this.reel,
     required this.controller,
     required this.isInitialized,
+    this.errorMessage,
     this.isProcessed = true,
     this.coverUrl,
     required this.isProductVideo,
@@ -1198,6 +1230,7 @@ class _ReelPage extends StatelessWidget {
           _ReelVideoPlayer(
             controller: controller,
             isInitialized: isInitialized,
+            errorMessage: errorMessage,
             isProcessed: isProcessed,
             coverUrl: coverUrl,
           ),

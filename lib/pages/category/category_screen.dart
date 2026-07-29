@@ -5,7 +5,6 @@ import 'package:optombai/widgets/shimmer/shimmer_product_grid.dart';
 import 'package:optombai/bloc/product_bloc/product_bloc.dart';
 import 'package:optombai/pages/main_screen/main_screen.dart';
 import 'package:optombai/app/router/app_router.dart';
-import 'package:optombai/widgets/app_scaffold/app_scaffold.dart';
 import 'package:optombai/widgets/bottom_nav.dart';
 import 'package:optombai/widgets/translation/text_translated.dart';
 import 'package:optombai/widgets/utils/fields/custom_search_field.dart';
@@ -14,6 +13,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:optombai/core/theme_notifier.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:optombai/data/models/category/category_model.dart';
+import 'package:optombai/utils/category_asset_resolver.dart';
+import 'package:optombai/data/mock/sedan_mock_listings.dart';
 
 @RoutePage()
 class CategoryScreen extends StatefulWidget {
@@ -142,9 +143,19 @@ class _CategoryScreenState extends State<CategoryScreen> {
                       itemCount: filteredCategories.length,
                       itemBuilder: (BuildContext ctx, index) {
                         final category = filteredCategories[index];
+                        final localAsset =
+                            localCategoryAssetForName(category.name);
+                        final mockCategoryKey =
+                            sedanMockCategoryKeyForName(category.name);
                         return GestureDetector(
                           onTap: () {
-                            if (category.children.isNotEmpty) {
+                            if (mockCategoryKey != null) {
+                              context.router.push(ProductsRoute(
+                                childId: mockCategoryKey,
+                                title: category.name,
+                                mockCategoryKey: mockCategoryKey,
+                              ));
+                            } else if (category.children.isNotEmpty) {
                               context.router.push(SubcategoryRoute(
                                 title: category.name,
                                 children0: category.children,
@@ -186,40 +197,47 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                     aspectRatio: 1,
                                     child: ClipRRect(
                                       borderRadius: BorderRadius.circular(10),
-                                      child: category.icon.isNotEmpty
-                                          ? CachedNetworkImage(
-                                              imageUrl: category.icon,
+                                      child: localAsset != null
+                                          ? Image.asset(
+                                              localAsset,
                                               fit: BoxFit.cover,
-                                              memCacheWidth: (150 *
-                                                      MediaQuery.of(context)
-                                                          .devicePixelRatio)
-                                                  .round(),
-                                              memCacheHeight: (150 *
-                                                      MediaQuery.of(context)
-                                                          .devicePixelRatio)
-                                                  .round(),
-                                              placeholder: (_, __) => Container(
-                                                color: isDark
-                                                    ? Colors.grey[800]
-                                                    : const Color(0xFFF0F0F0),
-                                                child: Center(
-                                                  child: Icon(
-                                                    Icons.image_outlined,
-                                                    color: Colors.grey[400],
-                                                    size: 28,
-                                                  ),
-                                                ),
-                                              ),
-                                              errorWidget: (_, __, ___) =>
-                                                  Image.asset(
-                                                'assets/card_image.png',
-                                                fit: BoxFit.cover,
-                                              ),
                                             )
-                                          : Image.asset(
-                                              'assets/card_image.png',
-                                              fit: BoxFit.cover,
-                                            ),
+                                          : category.icon.isNotEmpty
+                                              ? CachedNetworkImage(
+                                                  imageUrl: category.icon,
+                                                  fit: BoxFit.cover,
+                                                  memCacheWidth: (150 *
+                                                          MediaQuery.of(context)
+                                                              .devicePixelRatio)
+                                                      .round(),
+                                                  memCacheHeight: (150 *
+                                                          MediaQuery.of(context)
+                                                              .devicePixelRatio)
+                                                      .round(),
+                                                  placeholder: (_, __) =>
+                                                      Container(
+                                                    color: isDark
+                                                        ? Colors.grey[800]
+                                                        : const Color(
+                                                            0xFFF0F0F0),
+                                                    child: Center(
+                                                      child: Icon(
+                                                        Icons.image_outlined,
+                                                        color: Colors.grey[400],
+                                                        size: 28,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  errorWidget: (_, __, ___) =>
+                                                      Image.asset(
+                                                    'assets/card_image.png',
+                                                    fit: BoxFit.cover,
+                                                  ),
+                                                )
+                                              : Image.asset(
+                                                  'assets/card_image.png',
+                                                  fit: BoxFit.cover,
+                                                ),
                                     ),
                                   ),
                                 ),

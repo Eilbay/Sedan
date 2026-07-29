@@ -1,5 +1,6 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:optombai/bloc/reel_bloc/reel_bloc.dart';
+import 'package:optombai/data/mock/sedan_mock_reels.dart';
 import 'package:optombai/data/models/reel/reel_model.dart';
 import 'package:optombai/data/repositories/i_reel_repository.dart';
 import 'package:optombai/features/promotion/data/data_sources/promotion_remote_data_source.dart';
@@ -55,6 +56,7 @@ class ReelImpressionTracker {
   /// resumes from the following reel. Deduplicated + offline-queued.
   void reportProgress(String reelId) {
     if (reelId.isEmpty) return;
+    if (isSedanMockReelId(reelId)) return;
     if (_progressReelIds.contains(reelId)) return;
     _progressReelIds.add(reelId);
     _queue.enqueue(PendingReelAction(ReelFeedActionKind.progress, reelId));
@@ -63,6 +65,7 @@ class ReelImpressionTracker {
   /// Record a promotion impression if the reel is a paid promo slot and the
   /// viewer is not the owner (deduplicated + offline-queued).
   void recordImpressionIfNeeded(ReelModel reel) {
+    if (isSedanMockReelId(reel.id)) return;
     if (currentUserId.isEmpty) return;
     if (_impressionReelIds.contains(reel.id)) return;
     if (!reel.isPromoCard) return;
