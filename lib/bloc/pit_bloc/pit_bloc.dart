@@ -18,34 +18,18 @@ class PitBloc extends Bloc<PitEvent, PitState> {
     on<InitPitEvent>(_onInitPit);
     on<IAPPitEvent>(_onIAPPit);
     on<ResetPitStateEvent>(_onResetState);
+    on<MockCreditPitEvent>(_onMockCreditPit);
+    on<MockDebitPitEvent>(_onMockDebitPit);
   }
 
   String _getToken() => preferences.getString(TOKEN_KEY) ?? '';
 
-  Future<void> _onLoadPit(
+  // DEMO MODE: the wallet balance is a purely local mock
+  void _onLoadPit(
     LoadPitEvent event,
     Emitter<PitState> emit,
-  ) async {
-    final token = _getToken();
-    if (token.isEmpty) return;
-
-    emit(state.copyWith(isLoading: true, errors: []));
-
-    try {
-      final wallet = await _repository.getMyPit(token);
-      emit(state.copyWith(
-        isLoading: false,
-        isSuccess: true,
-        wallet: wallet,
-        balance: wallet.balance,
-      ));
-    } catch (e) {
-      debugPrint('LoadPitEvent error: $e');
-      emit(state.copyWith(
-        isLoading: false,
-        errors: [e.toString()],
-      ));
-    }
+  ) {
+    emit(state.copyWith(isLoading: false, isSuccess: true, errors: []));
   }
 
   Future<void> _onInitPit(
@@ -105,7 +89,9 @@ class PitBloc extends Bloc<PitEvent, PitState> {
       } else {
         emit(state.copyWith(
           isProcessing: false,
-          errors: [response.message.isNotEmpty ? response.message : 'Ошибка пополнения'],
+          errors: [
+            response.message.isNotEmpty ? response.message : 'Ошибка пополнения'
+          ],
         ));
       }
     } catch (e) {
@@ -115,6 +101,26 @@ class PitBloc extends Bloc<PitEvent, PitState> {
         errors: [e.toString()],
       ));
     }
+  }
+
+  void _onMockCreditPit(
+    MockCreditPitEvent event,
+    Emitter<PitState> emit,
+  ) {
+    emit(state.copyWith(
+      balance: state.balance + event.amount,
+      isSuccess: true,
+      isProcessing: false,
+    ));
+  }
+
+  void _onMockDebitPit(
+    MockDebitPitEvent event,
+    Emitter<PitState> emit,
+  ) {
+    emit(state.copyWith(
+      balance: (state.balance - event.amount).clamp(0, double.infinity),
+    ));
   }
 
   void _onResetState(

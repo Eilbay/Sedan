@@ -50,3 +50,23 @@ class IAPPitEvent extends PitEvent {
   @override
   List<Object?> get props => [receiptData, productId, platform, transactionId];
 }
+
+/// Demo-only: credits the balance locally without touching any payment
+class MockCreditPitEvent extends PitEvent {
+  final double amount;
+
+  const MockCreditPitEvent({required this.amount});
+
+  @override
+  List<Object?> get props => [amount];
+}
+
+/// Demo-only: debits the balance locally (e.g. to "promote" a listing)
+class MockDebitPitEvent extends PitEvent {
+  final double amount;
+
+  const MockDebitPitEvent({required this.amount});
+
+  @override
+  List<Object?> get props => [amount];
+}

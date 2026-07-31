@@ -135,6 +135,7 @@ class _PitScreenState extends State<PitScreen> {
     return _selectedAmount;
   }
 
+  /// DEMO MODE: top-ups are simulated locally for showcase purposes
   Future<void> _processPayment() async {
     if (_processing) return;
 
@@ -150,151 +151,15 @@ class _PitScreenState extends State<PitScreen> {
       return;
     }
 
-    if (_selectedMethod == PitPaymentMethod.iap) {
-      await _processIAPPayment(amount);
-      return;
-    }
-
     setState(() => _processing = true);
 
-    final user = context.read<UserBloc>().state.user;
-    final beforeBalance = context.read<PitBloc>().state.balance;
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    if (!mounted) return;
 
-    final provider =
-        _selectedMethod == PitPaymentMethod.finik ? 'finik' : 'freedompay';
-
-    final paymentId = await paymentService.initPit(
-      amount: amount,
-      provider: provider,
-    );
-
-    if (paymentId == null && mounted) {
-      paymentService.showErrorMessage('Не удалось инициализировать платеж');
-      setState(() => _processing = false);
-      return;
-    }
-
-    final orderId = paymentId ?? paymentService.generateOrderId();
-    bool paymentSuccessful = false;
-
-    final userName = user.username;
-    final userPhone = user.phone_number;
-    final userCountry = user.country?.name ?? user.userCountry?.name ?? '';
-    final userEmail = user.email;
-
-    if (_selectedMethod == PitPaymentMethod.finik) {
-      paymentSuccessful = await paymentService.processFinikPayment(
-        orderId: orderId,
-        amount: amount,
-        userName: userName,
-        userPhone: userPhone,
-        userCountry: userCountry,
-        userEmail: userEmail,
-      );
-    } else {
-      paymentSuccessful = await _processPayboxPayment(
-        orderId,
-        amount,
-        user.id,
-        userEmail,
-        userPhone,
-        userName,
-        userCountry,
-      );
-    }
-
-    if (paymentSuccessful && mounted) {
-      final credited = await paymentService.confirmBalanceCredited(
-        beforeBalance: beforeBalance,
-        amount: amount,
-      );
-
-      if (mounted) {
-        // Only claim success if the wallet balance actually grew. Otherwise the
-        // charge went through but the server-side webhook hasn't credited yet.
-        if (credited) {
-          paymentService.showSuccessMessage(amount);
-        } else {
-          paymentService.showPendingMessage();
-        }
-        context.router.maybePop();
-      }
-    }
-
-    if (mounted) setState(() => _processing = false);
-  }
-
-  Future<bool> _processPayboxPayment(
-    String orderId,
-    double amount,
-    String userId,
-    String userEmail,
-    String userPhone,
-    String userName,
-    String userCountry,
-  ) async {
-    final result = await paymentService.processPayboxPayment(
-      orderId: orderId,
-      amount: amount,
-      userId: userId,
-      userEmail: userEmail,
-      userPhone: userPhone,
-      userName: userName,
-      userCountry: userCountry,
-    );
-
-    if (result == null) {
-      paymentService.showErrorMessage('Не удалось открыть окно оплаты');
-      return false;
-    }
-
-    return result == true;
-  }
-
-  Future<void> _processIAPPayment(double amount) async {
-    debugPrint('PitScreen: _processIAPPayment called with amount=$amount');
-    debugPrint('PitScreen: IAP available=${_iapService.isAvailable}');
-    debugPrint(
-        'PitScreen: All products=${_iapService.products.map((p) => p.id).toList()}');
-    debugPrint(
-        'PitScreen: Wallet products=${_iapService.getPitProducts().map((p) => p.id).toList()}');
-
-    if (!_iapService.isAvailable) {
-      paymentService.showErrorMessage(
-          'In-App Purchase недоступен. Проверьте подключение к App Store.');
-      return;
-    }
-
-    final walletProducts = _iapService.getPitProducts();
-    if (walletProducts.isEmpty) {
-      paymentService.showErrorMessage(
-        'IAP продукты не загружены. Возможные причины:\n'
-        '• Продукты ещё на проверке Apple\n'
-        '• Нет подключения к App Store\n'
-        '• Используйте TestFlight или dev-сборку',
-      );
-      return;
-    }
-
-    final product = _iapService.getPitProductByAmount(amount);
-    if (product == null) {
-      final availableAmounts = walletProducts
-          .map((p) => IAPService.getPitAmount(p.id)?.toStringAsFixed(0) ?? p.id)
-          .join(', ');
-      paymentService.showErrorMessage(
-        'Продукт на сумму ${amount.toStringAsFixed(0)} не найден.\nДоступные: $availableAmounts',
-      );
-      return;
-    }
-
-    setState(() => _processing = true);
-
-    debugPrint('PitScreen: Starting IAP purchase for ${product.id}');
-    final success = await _iapService.buyConsumable(product);
-
-    if (!success && mounted) {
-      setState(() => _processing = false);
-    }
+    context.read<PitBloc>().add(MockCreditPitEvent(amount: amount));
+    paymentService.showSuccessMessage(amount);
+    setState(() => _processing = false);
+    context.router.maybePop();
   }
 
   void _navigateToManagerContact(double amount) {

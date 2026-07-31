@@ -3,6 +3,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:optombai/app/router/app_router.dart';
 
 import 'package:optombai/bloc/language_bloc/extensions/translation_context_extension.dart';
+import 'package:optombai/bloc/pit_bloc/pit_bloc.dart';
+import 'package:optombai/bloc/pit_bloc/pit_event.dart';
+import 'package:optombai/bloc/pit_bloc/pit_state.dart';
 import 'package:optombai/core/appColors.dart';
 import 'package:optombai/core/dark/dark_background.dart';
 import 'package:optombai/core/import_links.dart';
@@ -10,6 +13,7 @@ import 'package:optombai/data/mock/sedan_mock_listings.dart';
 import 'package:optombai/data/models/account/user/socials/social_owner.dart';
 import 'package:optombai/data/models/account/user/socials/social_type.dart';
 import 'package:optombai/features/notifications/presentation/widgets/notification_bell_icon.dart';
+import 'package:optombai/widgets/product/market_product_card.dart';
 import 'package:optombai/widgets/bottom_nav.dart';
 import 'package:optombai/widgets/profile/about_us/about_us_card.dart';
 import 'package:optombai/widgets/profile/profile_header.dart';
@@ -46,8 +50,100 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int currentIndex = 0;
   final ScrollController _controller = ScrollController();
 
+  // DEMO MODE: "promoting" a listing is simulated locally for showcase
+  static const double _promoCost = 100;
+  static const Duration _promoDuration = Duration(days: 7);
+  final Map<String, DateTime> _promotedListings = {};
+  bool _promoteLoading = false;
+
   Future<void> _handleRefresh() async {
     await Future<void>.delayed(const Duration(milliseconds: 250));
+  }
+
+  Future<void> _handlePromote(
+      BuildContext context, SedanMockListing listing) async {
+    if (_promotedListings.containsKey(listing.title) || _promoteLoading) {
+      return;
+    }
+
+    final balance = context.read<PitBloc>().state.balance;
+    if (balance < _promoCost) {
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              'Нужно ${_promoCost.toStringAsFixed(0)} сом на балансе',
+            ),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+              label: 'Пополнить',
+              textColor: Colors.white,
+              onPressed: () async {
+                await context.router.push(const PitRoute());
+                if (!context.mounted) return;
+                _handlePromote(context, listing);
+              },
+            ),
+          ),
+        );
+      return;
+    }
+
+    setState(() => _promoteLoading = true);
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
+
+    context.read<PitBloc>().add(const MockDebitPitEvent(amount: _promoCost));
+    setState(() {
+      _promoteLoading = false;
+      _promotedListings[listing.title] = DateTime.now().add(_promoDuration);
+    });
+
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text('Объявление продвинуто!'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+  }
+
+  void _confirmStopPromotion(BuildContext context, SedanMockListing listing) {
+    showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Остановить продвижение?'),
+        content: const Text(
+          'Товар перестанет показываться в рекламных местах.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Остановить'),
+          ),
+        ],
+      ),
+    ).then((confirmed) {
+      if (confirmed != true || !mounted) return;
+      setState(() => _promotedListings.remove(listing.title));
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Продвижение остановлено'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+    });
   }
 
   void _handleBack(BuildContext context) async {
@@ -375,6 +471,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           currentUser: currentUser,
                           showInlineMenu: false,
                         ),
+                        if (isCurrentUser) ...[
+                          SizedBox(height: 12.h),
+                          _WalletCard(isDark: isDark),
+                        ],
                         SizedBox(height: 10.h),
                         _tabBar(context),
                         _tabContent(context),
@@ -445,7 +545,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             crossAxisCount: 2,
             mainAxisSpacing: 12.h,
             crossAxisSpacing: 12.w,
-            mainAxisExtent: 300.h,
+            mainAxisExtent: 340.h,
           ),
           itemBuilder: (context, index) => _mockProductCard(
             context,
@@ -518,38 +618,106 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final engine = listing.specs.length > 1 ? listing.specs[1].value : '';
 
     if (isCompact) {
+      final promoEndAt = _promotedListings[listing.title];
+      final isPromoted = promoEndAt != null;
+      const purple = Color(0xFF7B2FF2);
+
+      void openDetails() {
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => _MockListingDetailsPage(listing: listing),
+          ),
+        );
+      }
+
       return Material(
         color: cardColor,
         borderRadius: BorderRadius.circular(12),
         clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => _MockListingDetailsPage(listing: listing),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: borderColor),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                flex: 5,
+                child: GestureDetector(
+                  onTap: openDetails,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.asset(
+                        listing.imageAsset,
+                        fit: BoxFit.cover,
+                      ),
+                      Positioned(
+                        left: 8,
+                        bottom: 8,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.remove_red_eye,
+                                size: 15, color: Colors.white),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${listing.views}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                shadows: [
+                                  Shadow(blurRadius: 4, color: Colors.black54),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (isPromoted)
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: GestureDetector(
+                            onTap: () =>
+                                _confirmStopPromotion(context, listing),
+                            child: const VipBadgeNew(),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
-            );
-          },
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: borderColor),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 5,
+              if (!isPromoted) ...[
+                Container(height: 1, color: borderColor),
+                InkWell(
+                  onTap: () => _handlePromote(context, listing),
                   child: SizedBox(
-                    width: double.infinity,
-                    child: Image.asset(
-                      listing.imageAsset,
-                      fit: BoxFit.cover,
+                    height: 38.h,
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.campaign, size: 16, color: purple),
+                        SizedBox(width: 6),
+                        Text(
+                          'Запустить рекламу',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: purple,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                Expanded(
-                  flex: 5,
+              ],
+              Expanded(
+                flex: 5,
+                child: InkWell(
+                  onTap: openDetails,
                   child: Padding(
                     padding: EdgeInsets.all(10.w),
                     child: Column(
@@ -600,8 +768,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       );
@@ -688,6 +856,111 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
+// DEMO MODE: shows the mock advertising wallet balance right on the profile
+class _WalletCard extends StatelessWidget {
+  const _WalletCard({required this.isDark});
+
+  final bool isDark;
+
+  static const _purple = Color(0xFF7B2FF2);
+  static const _green = Color(0xFF2EB872);
+
+  static String _formatThousands(num value) {
+    final text = value.round().toString();
+    final buffer = StringBuffer();
+    for (var i = 0; i < text.length; i++) {
+      if (i > 0 && (text.length - i) % 3 == 0) buffer.write(' ');
+      buffer.write(text[i]);
+    }
+    return buffer.toString();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<PitBloc, PitState>(
+      buildWhen: (p, c) => p.balance != c.balance,
+      builder: (context, state) {
+        return Container(
+          padding: EdgeInsets.all(14.w),
+          decoration: BoxDecoration(
+            color: isDark ? _ProfileScreenState._darkCard : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: (isDark ? Colors.white : Colors.black)
+                  .withValues(alpha: 0.06),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: _purple.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.account_balance_wallet,
+                    color: _purple, size: 24),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Рекламный кошелек',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white70 : Colors.black54,
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      '${_formatThousands(state.balance)} сом',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: 30.h,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    await context.router.push(const PitRoute());
+                    if (context.mounted) {
+                      context.read<PitBloc>().add(const LoadPitEvent());
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _green,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: EdgeInsets.symmetric(horizontal: 12.w),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    'Пополнить',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _MockListingDetailsPage extends StatefulWidget {
   const _MockListingDetailsPage({required this.listing});
 
@@ -702,6 +975,95 @@ class _MockListingDetailsPageState extends State<_MockListingDetailsPage> {
   bool _isSaved = false;
   int _financeIndex = 0;
   double _termMonths = 36;
+
+  // DEMO MODE: same simulated promotion as the "Мои объявления" grid card —
+  static const double _promoCost = 100;
+  static const Duration _promoDuration = Duration(days: 7);
+  DateTime? _promoEndAt;
+  bool _promoting = false;
+
+  Future<void> _handlePromote() async {
+    if (_promoEndAt != null || _promoting) return;
+
+    final balance = context.read<PitBloc>().state.balance;
+    if (balance < _promoCost) {
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              'Нужно ${_promoCost.toStringAsFixed(0)} сом на балансе',
+            ),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+              label: 'Пополнить',
+              textColor: Colors.white,
+              onPressed: () async {
+                await context.router.push(const PitRoute());
+                if (!context.mounted) return;
+                _handlePromote();
+              },
+            ),
+          ),
+        );
+      return;
+    }
+
+    setState(() => _promoting = true);
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
+
+    context.read<PitBloc>().add(const MockDebitPitEvent(amount: _promoCost));
+    setState(() {
+      _promoting = false;
+      _promoEndAt = DateTime.now().add(_promoDuration);
+    });
+
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text('Объявление продвинуто!'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+  }
+
+  void _confirmStopPromotion() {
+    showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Остановить продвижение?'),
+        content: const Text(
+          'Товар перестанет показываться в рекламных местах.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Остановить'),
+          ),
+        ],
+      ),
+    ).then((confirmed) {
+      if (confirmed != true || !mounted) return;
+      setState(() => _promoEndAt = null);
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Продвижение остановлено'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+    });
+  }
 
   String get _usdPrice => widget.listing.price;
 
@@ -749,8 +1111,13 @@ class _MockListingDetailsPageState extends State<_MockListingDetailsPage> {
                 child: _MockDetailsTopBar(
                   title: listing.title,
                   isSaved: _isSaved,
+                  isPromoted: _promoEndAt != null,
                   onBack: () => Navigator.of(context).maybePop(),
                   onSavedTap: () => setState(() => _isSaved = !_isSaved),
+                  onMenuAction: (action) {
+                    if (action == 'promote') _handlePromote();
+                    if (action == 'stop') _confirmStopPromotion();
+                  },
                 ),
               ),
             ),
@@ -856,14 +1223,18 @@ class _MockDetailsTopBar extends StatelessWidget {
   const _MockDetailsTopBar({
     required this.title,
     required this.isSaved,
+    required this.isPromoted,
     required this.onBack,
     required this.onSavedTap,
+    required this.onMenuAction,
   });
 
   final String title;
   final bool isSaved;
+  final bool isPromoted;
   final VoidCallback onBack;
   final VoidCallback onSavedTap;
+  final ValueChanged<String> onMenuAction;
 
   @override
   Widget build(BuildContext context) {
@@ -899,9 +1270,35 @@ class _MockDetailsTopBar extends StatelessWidget {
             onPressed: () {},
             icon: const Icon(Icons.share, color: Colors.white),
           ),
-          IconButton(
-            onPressed: () {},
+          PopupMenuButton<String>(
+            color: const Color(0xff192536),
+            onSelected: onMenuAction,
             icon: const Icon(Icons.more_vert, color: Colors.white),
+            itemBuilder: (_) => [
+              if (!isPromoted)
+                const PopupMenuItem<String>(
+                  value: 'promote',
+                  child: Row(
+                    children: [
+                      Icon(Icons.trending_up, color: Color(0xff0095D5)),
+                      SizedBox(width: 8),
+                      Text('Продвинуть', style: TextStyle(color: Colors.white)),
+                    ],
+                  ),
+                )
+              else
+                const PopupMenuItem<String>(
+                  value: 'stop',
+                  child: Row(
+                    children: [
+                      Icon(Icons.trending_down, color: Colors.orange),
+                      SizedBox(width: 8),
+                      Text('Остановить продвижение',
+                          style: TextStyle(color: Colors.white)),
+                    ],
+                  ),
+                ),
+            ],
           ),
         ],
       ),
@@ -1508,3 +1905,4 @@ class _MockProfileReviewCard extends StatelessWidget {
     );
   }
 }
+

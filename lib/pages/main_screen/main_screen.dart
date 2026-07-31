@@ -1307,7 +1307,7 @@ class _SedanMockListingsSliver extends StatelessWidget {
           crossAxisCount: 2,
           mainAxisSpacing: 16.h,
           crossAxisSpacing: 12.w,
-          mainAxisExtent: 300.h,
+          mainAxisExtent: 268.h,
         ),
         delegate: SliverChildBuilderDelegate(
           (context, index) => _SedanHomeListingCard(
@@ -1360,7 +1360,6 @@ class _SedanHomeListingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final categoryTitle = sedanMockCategoryTitleForKey(listing.categoryKey);
     final bg = isDarkMode ? const Color(0xFF111116) : Colors.white;
     final fg = isDarkMode ? Colors.white : Colors.black;
     final sub = isDarkMode ? Colors.white60 : const Color(0xFF707070);
@@ -1430,7 +1429,7 @@ class _SedanHomeListingCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          categoryTitle,
+                          listing.price,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
@@ -1478,15 +1477,35 @@ class _SedanHomeListingCard extends StatelessWidget {
                         ),
                       ),
                       SizedBox(height: 8.h),
-                      Text(
-                        listing.price,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: _HomePageState._accent,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                        ),
+                      Row(
+                        children: [
+                          Container(
+                            width: 22.w,
+                            height: 22.w,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: (isDarkMode ? Colors.white : Colors.black)
+                                    .withValues(alpha: 0.15),
+                              ),
+                            ),
+                            child: ClipOval(
+                              child: Image.asset(
+                                'assets/icons/profile.png',
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 6.w),
+                          Text(
+                            'Sedan.kg',
+                            style: TextStyle(
+                              color: fg,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                       const Spacer(),
                       Row(

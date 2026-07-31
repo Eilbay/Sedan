@@ -6,6 +6,7 @@ class SedanMockListing {
   final List<SedanMockSpec> specs;
   final String condition;
   final bool isVip;
+  final int views;
 
   const SedanMockListing({
     required this.categoryKey,
@@ -15,6 +16,7 @@ class SedanMockListing {
     required this.specs,
     required this.condition,
     this.isVip = false,
+    this.views = 0,
   });
 }
 
@@ -38,6 +40,7 @@ const sedanMockListings = <SedanMockListing>[
     condition:
         'Отличное, без вложений. Автомобиль полностью обслужен, чистый и ухоженный салон.',
     isVip: true,
+    views: 342,
   ),
   SedanMockListing(
     categoryKey: 'suv',
@@ -51,6 +54,7 @@ const sedanMockListings = <SedanMockListing>[
     ],
     condition: 'Отличное, полностью обслужен, без вложений.',
     isVip: true,
+    views: 519,
   ),
   SedanMockListing(
     categoryKey: 'commercial',
@@ -64,6 +68,7 @@ const sedanMockListings = <SedanMockListing>[
     ],
     condition: 'Отличное, полностью обслужен, без вложений. Готов к работе.',
     isVip: true,
+    views: 187,
   ),
   SedanMockListing(
     categoryKey: 'motorcycle',
@@ -78,6 +83,7 @@ const sedanMockListings = <SedanMockListing>[
     condition:
         'Отличное, без пробега по Кыргызстану, полностью готов к эксплуатации.',
     isVip: true,
+    views: 96,
   ),
   SedanMockListing(
     categoryKey: 'parts',
@@ -90,6 +96,7 @@ const sedanMockListings = <SedanMockListing>[
     ],
     condition: 'Новые, оригинальное качество.',
     isVip: true,
+    views: 64,
   ),
   SedanMockListing(
     categoryKey: 'service',
@@ -102,6 +109,7 @@ const sedanMockListings = <SedanMockListing>[
     ],
     condition: 'Качественное выполнение работ, гарантия результата.',
     isVip: true,
+    views: 41,
   ),
 ];
 
