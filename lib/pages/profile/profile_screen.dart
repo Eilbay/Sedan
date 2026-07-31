@@ -13,6 +13,7 @@ import 'package:optombai/data/mock/sedan_mock_listings.dart';
 import 'package:optombai/data/models/account/user/socials/social_owner.dart';
 import 'package:optombai/data/models/account/user/socials/social_type.dart';
 import 'package:optombai/features/notifications/presentation/widgets/notification_bell_icon.dart';
+import 'package:optombai/features/promotion/presentation/widgets/insufficient_balance_dialog.dart';
 import 'package:optombai/widgets/product/market_product_card.dart';
 import 'package:optombai/widgets/bottom_nav.dart';
 import 'package:optombai/widgets/profile/about_us/about_us_card.dart';
@@ -68,27 +69,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     final balance = context.read<PitBloc>().state.balance;
     if (balance < _promoCost) {
-      ScaffoldMessenger.of(context)
-        ..clearSnackBars()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(
-              'Нужно ${_promoCost.toStringAsFixed(0)} сом на балансе',
-            ),
-            backgroundColor: Colors.orange,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 3),
-            action: SnackBarAction(
-              label: 'Пополнить',
-              textColor: Colors.white,
-              onPressed: () async {
-                await context.router.push(const PitRoute());
-                if (!context.mounted) return;
-                _handlePromote(context, listing);
-              },
-            ),
-          ),
-        );
+      await InsufficientBalanceDialog.show(
+        context,
+        requiredAmount: _promoCost,
+      );
       return;
     }
 
@@ -105,10 +89,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
       ..showSnackBar(
-        const SnackBar(
-          content: Text('Объявление продвинуто!'),
+        SnackBar(
+          content: const Text('Объявление продвинуто!'),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
   }
@@ -138,9 +124,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ScaffoldMessenger.of(context)
         ..clearSnackBars()
         ..showSnackBar(
-          const SnackBar(
-            content: Text('Продвижение остановлено'),
+          SnackBar(
+            content: const Text('Продвижение остановлено'),
             behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(12),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
     });
@@ -987,27 +975,10 @@ class _MockListingDetailsPageState extends State<_MockListingDetailsPage> {
 
     final balance = context.read<PitBloc>().state.balance;
     if (balance < _promoCost) {
-      ScaffoldMessenger.of(context)
-        ..clearSnackBars()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(
-              'Нужно ${_promoCost.toStringAsFixed(0)} сом на балансе',
-            ),
-            backgroundColor: Colors.orange,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 3),
-            action: SnackBarAction(
-              label: 'Пополнить',
-              textColor: Colors.white,
-              onPressed: () async {
-                await context.router.push(const PitRoute());
-                if (!context.mounted) return;
-                _handlePromote();
-              },
-            ),
-          ),
-        );
+      await InsufficientBalanceDialog.show(
+        context,
+        requiredAmount: _promoCost,
+      );
       return;
     }
 
@@ -1024,10 +995,12 @@ class _MockListingDetailsPageState extends State<_MockListingDetailsPage> {
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
       ..showSnackBar(
-        const SnackBar(
-          content: Text('Объявление продвинуто!'),
+        SnackBar(
+          content: const Text('Объявление продвинуто!'),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
   }
@@ -1057,9 +1030,11 @@ class _MockListingDetailsPageState extends State<_MockListingDetailsPage> {
       ScaffoldMessenger.of(context)
         ..clearSnackBars()
         ..showSnackBar(
-          const SnackBar(
-            content: Text('Продвижение остановлено'),
+          SnackBar(
+            content: const Text('Продвижение остановлено'),
             behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(12),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
     });
