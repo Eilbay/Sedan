@@ -47,11 +47,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int currentIndex = 0;
   final ScrollController _controller = ScrollController();
 
-  // DEMO MODE: "promoting" a listing is simulated locally for showcase
-  static const double _promoCost = 100;
-  static const Duration _promoDuration = Duration(days: 7);
+  // DEMO MODE
+  static const Duration _moderationDuration = Duration(seconds: 3);
   final Map<String, DateTime> _promotedListings = {};
-  bool _promoteLoading = false;
+  final Set<String> _moderatingListings = {};
+  final Map<String, Timer> _moderationTimers = {};
 
   Future<void> _handleRefresh() async {
     await Future<void>.delayed(const Duration(milliseconds: 250));
@@ -59,34 +59,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _handlePromote(
       BuildContext context, SedanMockListing listing) async {
-    if (_promotedListings.containsKey(listing.title) || _promoteLoading) {
+    if (_promotedListings.containsKey(listing.title) ||
+        _moderatingListings.contains(listing.title)) {
       return;
     }
 
-    final balance = context.read<PitBloc>().state.balance;
-    if (balance < _promoCost) {
-      await InsufficientBalanceDialog.show(
-        context,
-        requiredAmount: _promoCost,
-      );
-      return;
-    }
+    final package = await _MockPromotionDialog.show(
+      context,
+      productName: listing.title,
+    );
+    if (package == null || !mounted) return;
 
-    setState(() => _promoteLoading = true);
-    await Future<void>.delayed(const Duration(milliseconds: 500));
-    if (!mounted) return;
-
-    context.read<PitBloc>().add(const MockDebitPitEvent(amount: _promoCost));
-    setState(() {
-      _promoteLoading = false;
-      _promotedListings[listing.title] = DateTime.now().add(_promoDuration);
-    });
+    context.read<PitBloc>().add(MockDebitPitEvent(amount: package.price));
+    setState(() => _moderatingListings.add(listing.title));
 
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
       ..showSnackBar(
         SnackBar(
-          content: const Text('Объявление продвинуто!'),
+          content: const Text('Продвижение запущено!'),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.all(12),
@@ -94,6 +85,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
+
+    _moderationTimers[listing.title]?.cancel();
+    _moderationTimers[listing.title] = Timer(_moderationDuration, () {
+      if (!mounted) return;
+      setState(() {
+        _moderatingListings.remove(listing.title);
+        _promotedListings[listing.title] =
+            DateTime.now().add(Duration(days: package.days));
+      });
+    });
   }
 
   void _confirmStopPromotion(BuildContext context, SedanMockListing listing) {
@@ -151,6 +152,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void dispose() {
     _controller.dispose();
+    for (final timer in _moderationTimers.values) {
+      timer.cancel();
+    }
     super.dispose();
   }
 
@@ -161,7 +165,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       description: _mockProfileDescription,
       about_us: _mockProfileAboutUs.trim(),
       userType: 'auto_salon',
-      image: null,
+      image: 'assets/sedan.png',
       postsCount: 2,
       rating: 5,
       reviewsCount: 3,
@@ -589,6 +593,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (isCompact) {
       final promoEndAt = _promotedListings[listing.title];
       final isPromoted = promoEndAt != null;
+      final isModerating = _moderatingListings.contains(listing.title);
       const purple = Color(0xFF7B2FF2);
 
       void openDetails() {
@@ -654,12 +659,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 _confirmStopPromotion(context, listing),
                             child: const VipBadgeNew(),
                           ),
+                        )
+                      else if (isModerating)
+                        const Positioned(
+                          top: 8,
+                          right: 8,
+                          child: _ModerationBadge(),
                         ),
                     ],
                   ),
                 ),
               ),
-              if (!isPromoted) ...[
+              if (isModerating) ...[
+                Container(height: 1, color: borderColor),
+                SizedBox(
+                  height: 38.h,
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.5,
+                          color: Color(0xffF5A623),
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'На модерации',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xffF5A623),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else if (!isPromoted) ...[
                 Container(height: 1, color: borderColor),
                 InkWell(
                   onTap: () => _handlePromote(context, listing),
@@ -825,7 +863,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-// DEMO MODE: shows the mock advertising wallet balance right on the profile
+// DEMO MODE
 class _WalletCard extends StatelessWidget {
   const _WalletCard({required this.isDark});
 
@@ -930,6 +968,73 @@ class _WalletCard extends StatelessWidget {
   }
 }
 
+class _ModerationBadge extends StatelessWidget {
+  const _ModerationBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xffF5A623),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 12,
+            height: 12,
+            child: CircularProgressIndicator(
+              strokeWidth: 1.5,
+              color: Colors.white,
+            ),
+          ),
+          SizedBox(width: 4),
+          Text(
+            'На модерации',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PromotedBadge extends StatelessWidget {
+  const _PromotedBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xff0095D5),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.trending_up, size: 12, color: Colors.white),
+          SizedBox(width: 4),
+          Text(
+            'Продвигается',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _MockListingDetailsPage extends StatefulWidget {
   const _MockListingDetailsPage({required this.listing});
 
@@ -945,39 +1050,29 @@ class _MockListingDetailsPageState extends State<_MockListingDetailsPage> {
   int _financeIndex = 0;
   double _termMonths = 36;
 
-  // DEMO MODE: same simulated promotion as the "Мои объявления" grid card —
-  static const double _promoCost = 100;
-  static const Duration _promoDuration = Duration(days: 7);
+  // DEMO MODE
+  static const Duration _moderationDuration = Duration(seconds: 3);
   DateTime? _promoEndAt;
-  bool _promoting = false;
+  bool _moderating = false;
+  Timer? _moderationTimer;
 
   Future<void> _handlePromote() async {
-    if (_promoEndAt != null || _promoting) return;
+    if (_promoEndAt != null || _moderating) return;
 
-    final balance = context.read<PitBloc>().state.balance;
-    if (balance < _promoCost) {
-      await InsufficientBalanceDialog.show(
-        context,
-        requiredAmount: _promoCost,
-      );
-      return;
-    }
+    final package = await _MockPromotionDialog.show(
+      context,
+      productName: widget.listing.title,
+    );
+    if (package == null || !mounted) return;
 
-    setState(() => _promoting = true);
-    await Future<void>.delayed(const Duration(milliseconds: 500));
-    if (!mounted) return;
-
-    context.read<PitBloc>().add(const MockDebitPitEvent(amount: _promoCost));
-    setState(() {
-      _promoting = false;
-      _promoEndAt = DateTime.now().add(_promoDuration);
-    });
+    context.read<PitBloc>().add(MockDebitPitEvent(amount: package.price));
+    setState(() => _moderating = true);
 
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
       ..showSnackBar(
         SnackBar(
-          content: const Text('Объявление продвинуто!'),
+          content: const Text('Продвижение запущено!'),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.all(12),
@@ -985,6 +1080,21 @@ class _MockListingDetailsPageState extends State<_MockListingDetailsPage> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
+
+    _moderationTimer?.cancel();
+    _moderationTimer = Timer(_moderationDuration, () {
+      if (!mounted) return;
+      setState(() {
+        _moderating = false;
+        _promoEndAt = DateTime.now().add(Duration(days: package.days));
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _moderationTimer?.cancel();
+    super.dispose();
   }
 
   void _confirmStopPromotion() {
@@ -1070,6 +1180,7 @@ class _MockListingDetailsPageState extends State<_MockListingDetailsPage> {
                   title: listing.title,
                   isSaved: _isSaved,
                   isPromoted: _promoEndAt != null,
+                  isModerating: _moderating,
                   onBack: () => Navigator.of(context).maybePop(),
                   onSavedTap: () => setState(() => _isSaved = !_isSaved),
                   onMenuAction: (action) {
@@ -1101,6 +1212,13 @@ class _MockListingDetailsPageState extends State<_MockListingDetailsPage> {
                         letterSpacing: 1,
                       ),
                     ),
+                    if (_moderating) ...[
+                      SizedBox(height: 6.h),
+                      const _ModerationBadge(),
+                    ] else if (_promoEndAt != null) ...[
+                      SizedBox(height: 6.h),
+                      const _PromotedBadge(),
+                    ],
                     SizedBox(height: 14.h),
                     const _MockSellerCard(),
                     SizedBox(height: 24.h),
@@ -1182,6 +1300,7 @@ class _MockDetailsTopBar extends StatelessWidget {
     required this.title,
     required this.isSaved,
     required this.isPromoted,
+    required this.isModerating,
     required this.onBack,
     required this.onSavedTap,
     required this.onMenuAction,
@@ -1190,6 +1309,7 @@ class _MockDetailsTopBar extends StatelessWidget {
   final String title;
   final bool isSaved;
   final bool isPromoted;
+  final bool isModerating;
   final VoidCallback onBack;
   final VoidCallback onSavedTap;
   final ValueChanged<String> onMenuAction;
@@ -1233,7 +1353,26 @@ class _MockDetailsTopBar extends StatelessWidget {
             onSelected: onMenuAction,
             icon: const Icon(Icons.more_vert, color: Colors.white),
             itemBuilder: (_) => [
-              if (!isPromoted)
+              if (isModerating)
+                const PopupMenuItem<String>(
+                  enabled: false,
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.5,
+                          color: Color(0xffF5A623),
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Text('На модерации...',
+                          style: TextStyle(color: Colors.white54)),
+                    ],
+                  ),
+                )
+              else if (!isPromoted)
                 const PopupMenuItem<String>(
                   value: 'promote',
                   child: Row(
@@ -1437,7 +1576,8 @@ class _MockSellerCard extends StatelessWidget {
         children: [
           const CircleAvatar(
             radius: 24,
-            backgroundImage: AssetImage('assets/icons/support_agent.jpg'),
+            backgroundColor: Colors.black,
+            backgroundImage: AssetImage('assets/sedan.png'),
           ),
           SizedBox(width: 12.w),
           const Expanded(
@@ -1859,6 +1999,490 @@ class _MockProfileReviewCard extends StatelessWidget {
             style: TextStyle(color: subColor, height: 1.35),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// DEMO MODE
+class _MockPromoPackage {
+  const _MockPromoPackage({
+    required this.name,
+    required this.description,
+    required this.days,
+    required this.price,
+    required this.reachMin,
+    required this.reachMax,
+  });
+
+  final String name;
+  final String description;
+  final int days;
+  final double price;
+  final int reachMin;
+  final int reachMax;
+}
+
+const _mockPromoPackages = <_MockPromoPackage>[
+  _MockPromoPackage(
+    name: '1 день',
+    description: 'Быстрый охват на сутки',
+    days: 1,
+    price: 50,
+    reachMin: 100,
+    reachMax: 400,
+  ),
+  _MockPromoPackage(
+    name: '7 дней',
+    description: 'Оптимальный вариант',
+    days: 7,
+    price: 100,
+    reachMin: 1000,
+    reachMax: 3000,
+  ),
+  _MockPromoPackage(
+    name: '30 дней',
+    description: 'Максимальный охват',
+    days: 30,
+    price: 300,
+    reachMin: 5000,
+    reachMax: 15000,
+  ),
+];
+
+String _mockPromoDaysWord(int days) {
+  if (days % 10 == 1 && days % 100 != 11) return 'день';
+  if ([2, 3, 4].contains(days % 10) && ![12, 13, 14].contains(days % 100)) {
+    return 'дня';
+  }
+  return 'дней';
+}
+
+String _mockPromoFormatReach(int number) {
+  if (number >= 1000) return '${(number / 1000).toStringAsFixed(1)}K';
+  return number.toString();
+}
+
+class _MockPromotionDialog extends StatefulWidget {
+  const _MockPromotionDialog({required this.productName});
+
+  final String productName;
+
+  static Future<_MockPromoPackage?> show(
+    BuildContext context, {
+    required String productName,
+  }) {
+    return showDialog<_MockPromoPackage?>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _MockPromotionDialog(productName: productName),
+    );
+  }
+
+  @override
+  State<_MockPromotionDialog> createState() => _MockPromotionDialogState();
+}
+
+class _MockPromotionDialogState extends State<_MockPromotionDialog> {
+  _MockPromoPackage? _selected;
+  bool _submitting = false;
+
+  Future<void> _confirm() async {
+    final selected = _selected;
+    if (selected == null || _submitting) return;
+
+    final balance = context.read<PitBloc>().state.balance;
+    if (balance < selected.price) {
+      Navigator.pop(context);
+      await InsufficientBalanceDialog.show(
+        context,
+        requiredAmount: selected.price,
+      );
+      return;
+    }
+
+    setState(() => _submitting = true);
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
+    Navigator.pop(context, selected);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = context.select((ThemeNotifier n) => n.isDarkMode);
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      backgroundColor: isDark ? const Color(0xff192536) : Colors.white,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xff0095D5).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.trending_up,
+                      color: Color(0xff0095D5),
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Выберите план продвижения',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          widget.productName.length > 30
+                              ? '${widget.productName.substring(0, 30)}...'
+                              : widget.productName,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: isDark ? Colors.white54 : Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed:
+                        _submitting ? null : () => Navigator.pop(context),
+                    icon: Icon(
+                      Icons.close,
+                      color: isDark ? Colors.white54 : Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.blue.withValues(alpha: 0.1)
+                      : Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 20,
+                      color:
+                          isDark ? Colors.blue.shade300 : Colors.blue.shade700,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Товар будет показываться во всех разделах: топы категорий, главная, поиск',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark
+                              ? Colors.blue.shade200
+                              : Colors.blue.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Доступные планы:',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _mockPromoPackages.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final package = _mockPromoPackages[index];
+                  final isSelected = _selected == package;
+
+                  return _MockPackageCard(
+                    package: package,
+                    isSelected: isSelected,
+                    isDark: isDark,
+                    onTap: () => setState(() => _selected = package),
+                  );
+                },
+              ),
+              const SizedBox(height: 24),
+              if (_selected != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xff0095D5).withValues(alpha: 0.15)
+                        : const Color(0xff0095D5).withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xff0095D5).withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'К оплате:',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isDark ? Colors.white70 : Colors.black87,
+                            ),
+                          ),
+                          Text(
+                            '${_selected!.price.toStringAsFixed(0)} KGS',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xff0095D5),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Ожидаемый охват:',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isDark ? Colors.white54 : Colors.grey,
+                            ),
+                          ),
+                          Text(
+                            '${_mockPromoFormatReach(_selected!.reachMin)} - ${_mockPromoFormatReach(_selected!.reachMax)}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.green,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed:
+                          _submitting ? null : () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        side: BorderSide(
+                          color: isDark ? Colors.white24 : Colors.grey.shade400,
+                        ),
+                      ),
+                      child: Text(
+                        'Отмена',
+                        style: TextStyle(
+                          color: isDark ? Colors.white70 : Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed:
+                          _submitting || _selected == null ? null : _confirm,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xff0095D5),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: _submitting
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text(
+                              'Продвинуть',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MockPackageCard extends StatelessWidget {
+  const _MockPackageCard({
+    required this.package,
+    required this.isSelected,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  final _MockPromoPackage package;
+  final bool isSelected;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xff0095D5).withValues(alpha: 0.1)
+              : isDark
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.grey.shade50,
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xff0095D5)
+                : isDark
+                    ? Colors.white24
+                    : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        package.name,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          package.description,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? Colors.white54 : Colors.grey,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xff0095D5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${package.price.toStringAsFixed(0)} KGS',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_today,
+                      size: 16,
+                      color: isDark ? Colors.white54 : Colors.grey,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${package.days} ${_mockPromoDaysWord(package.days)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? Colors.white70 : Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.visibility,
+                      size: 16,
+                      color: Colors.green.shade600,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${_mockPromoFormatReach(package.reachMin)}-${_mockPromoFormatReach(package.reachMax)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.green.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

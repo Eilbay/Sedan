@@ -11,6 +11,7 @@ import 'package:optombai/widgets/profile/quality_badge.dart';
 import 'package:optombai/widgets/translation/text_translated.dart';
 import 'package:optombai/core/form_status.dart';
 import 'package:optombai/widgets/utils/card/premium_connect_card.dart';
+import 'package:optombai/widgets/utils/smart_asset_image.dart';
 import 'package:optombai/core/import_links.dart';
 import 'package:optombai/widgets/profile/profile_header.dart';
 
@@ -151,6 +152,8 @@ class _SecondHeaderState extends State<SecondHeader> {
 
   Widget _identityRow(BuildContext context, bool isDark) {
     final user = widget.currentUser;
+    final hasImage = user.image is String &&
+        (user.image as String).trim().isNotEmpty;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -168,10 +171,9 @@ class _SecondHeaderState extends State<SecondHeader> {
           ),
           child: CircleAvatar(
             backgroundColor: const Color(0xffF0F0F0),
-            backgroundImage: user.image != null
-                ? CachedNetworkImageProvider(user.image)
-                : null,
-            child: user.image == null
+            backgroundImage:
+                hasImage ? SmartImage.provider(user.image as String) : null,
+            child: !hasImage
                 ? Icon(Icons.person, size: 44, color: Colors.grey.shade500)
                 : null,
           ),

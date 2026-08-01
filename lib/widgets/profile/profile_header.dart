@@ -20,6 +20,7 @@ import 'package:optombai/bloc/chat_bloc/chat_bloc.dart';
 import 'package:optombai/data/models/account/user/socials/social_owner.dart';
 import 'package:optombai/data/models/account/user/socials/social_type.dart';
 import 'package:optombai/utils/extensions/social_type_icon_extension.dart';
+import 'package:optombai/widgets/utils/smart_asset_image.dart';
 
 class ProfileHeader extends StatefulWidget {
   final User currentUser;
@@ -137,7 +138,8 @@ class _ProfileHeaderState extends State<ProfileHeader> {
 
     final canWrite =
         !widget.isCurrentUser && (widget.currentUser.by_admin != true);
-    final isMockAutoSalon = widget.currentUser.userType == 'auto_salon';
+    final isMockAutoSalon =
+        !widget.isCurrentUser && widget.currentUser.userType == 'auto_salon';
     final isBlockedByMeReactive = widget.currentUser.isBlockedByMe ||
         context.select((BlockBloc b) =>
             b.state.blockedIds.contains(widget.currentUser.id));
@@ -289,9 +291,8 @@ class _ProfileHeaderState extends State<ProfileHeader> {
       children: [
         _ProfileAvatarRing(
           imageUrl: user.image,
-          fallbackAsset: user.userType == 'auto_salon'
-              ? 'assets/icons/support_agent.jpg'
-              : null,
+          fallbackAsset:
+              user.userType == 'auto_salon' ? 'assets/sedan.png' : null,
         ),
         SizedBox(width: 14.w),
         Expanded(
@@ -1034,7 +1035,9 @@ class _ProfileAvatarRing extends StatelessWidget {
     final hasImageUrl = imageUrl != null && imageUrl!.trim().isNotEmpty;
     ImageProvider<Object>? imageProvider;
     if (hasImageUrl) {
-      imageProvider = CachedNetworkImageProvider(imageUrl!.ensureHttpsPrefix());
+      imageProvider = SmartImage.isAssetPath(imageUrl!)
+          ? SmartImage.provider(imageUrl!)
+          : CachedNetworkImageProvider(imageUrl!.ensureHttpsPrefix());
     } else if (fallbackAsset != null) {
       imageProvider = AssetImage(fallbackAsset!);
     }

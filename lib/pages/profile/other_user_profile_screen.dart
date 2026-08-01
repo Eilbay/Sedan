@@ -63,7 +63,7 @@ class _OtherUserProfileState extends State<OtherUserProfile> {
       description:
           'Автосалон «Aibek.Auto» — большой выбор автомобилей на любой вкус и бюджет!',
       userType: 'auto_salon',
-      image: null,
+      image: 'assets/sedan.png',
       is_verified: true,
       is_active: true,
       rating: 5,

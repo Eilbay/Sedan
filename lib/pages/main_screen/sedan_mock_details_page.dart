@@ -402,7 +402,8 @@ class _SellerCard extends StatelessWidget {
           children: [
             const CircleAvatar(
               radius: 24,
-              backgroundImage: AssetImage('assets/icons/support_agent.jpg'),
+              backgroundColor: Colors.black,
+              backgroundImage: AssetImage('assets/sedan.png'),
             ),
             SizedBox(width: 12.w),
             const Expanded(
