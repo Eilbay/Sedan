@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:optombai/app/router/app_router.dart';
 import 'package:optombai/data/mock/sedan_mock_listings.dart';
 import 'package:optombai/widgets/bottom_nav.dart';
+import 'package:optombai/widgets/product/details/comment_stars.dart';
 
 class SedanMockDetailsPage extends StatefulWidget {
   const SedanMockDetailsPage({super.key, required this.listing});
@@ -91,6 +92,8 @@ class _SedanMockDetailsPageState extends State<SedanMockDetailsPage> {
                         letterSpacing: 1,
                       ),
                     ),
+                    SizedBox(height: 8.h),
+                    _RatingAndArticleRow(listing: listing),
                     SizedBox(height: 14.h),
                     const _SellerCard(),
                     SizedBox(height: 24.h),
@@ -135,6 +138,8 @@ class _SedanMockDetailsPageState extends State<SedanMockDetailsPage> {
                     ),
                     for (final spec in listing.specs)
                       _InfoRow(label: spec.label, value: spec.value),
+                    SizedBox(height: 28.h),
+                    _SimilarListingsSection(currentListing: listing),
                     SizedBox(height: 28.h),
                     const Center(
                       child: Text(
@@ -342,7 +347,7 @@ class _PriceRow extends StatelessWidget {
     return Row(
       children: [
         Container(
-          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 9.h),
+          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
           decoration: BoxDecoration(
             color: const Color(0xFF2F80ED),
             borderRadius: BorderRadius.circular(8),
@@ -352,17 +357,17 @@ class _PriceRow extends StatelessWidget {
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w900,
-              fontSize: 16,
+              fontSize: 13,
             ),
           ),
         ),
-        SizedBox(width: 12.w),
+        SizedBox(width: 10.w),
         Text(
           usdPrice,
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w800,
-            fontSize: 16,
+            fontSize: 13,
           ),
         ),
         const Spacer(),
@@ -745,6 +750,142 @@ class _InfoRow extends StatelessWidget {
             TextSpan(
               text: value,
               style: TextStyle(color: valueColor ?? Colors.white70),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// DEMO MODE
+class _RatingAndArticleRow extends StatelessWidget {
+  const _RatingAndArticleRow({required this.listing});
+
+  final SedanMockListing listing;
+
+  @override
+  Widget build(BuildContext context) {
+    final articleNumber = 100000 + sedanMockListings.indexOf(listing);
+
+    return Row(
+      children: [
+        const Stars(rating: 5),
+        SizedBox(width: 10.w),
+        const Text(
+          '3 отзыва',
+          style: TextStyle(fontSize: 12, color: Colors.white54),
+        ),
+        SizedBox(width: 16.w),
+        Text(
+          'Арт: $articleNumber',
+          style: const TextStyle(fontSize: 12, color: Colors.white54),
+        ),
+      ],
+    );
+  }
+}
+
+class _SimilarListingsSection extends StatelessWidget {
+  const _SimilarListingsSection({required this.currentListing});
+
+  final SedanMockListing currentListing;
+
+  @override
+  Widget build(BuildContext context) {
+    final others = sedanMockListings.where((l) => l != currentListing).toList()
+      ..sort((a, b) {
+        final aSame = a.categoryKey == currentListing.categoryKey ? 0 : 1;
+        final bSame = b.categoryKey == currentListing.categoryKey ? 0 : 1;
+        return aSame.compareTo(bSame);
+      });
+
+    if (others.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Похожие объявления',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        SizedBox(height: 12.h),
+        SizedBox(
+          height: 210.h,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: others.length,
+            separatorBuilder: (_, __) => SizedBox(width: 10.w),
+            itemBuilder: (context, index) =>
+                _SimilarListingCard(listing: others[index]),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SimilarListingCard extends StatelessWidget {
+  const _SimilarListingCard({required this.listing});
+
+  final SedanMockListing listing;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => SedanMockDetailsPage(listing: listing),
+          ),
+        );
+      },
+      child: Container(
+        width: 150.w,
+        decoration: BoxDecoration(
+          color: const Color(0xFF14181F),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AspectRatio(
+              aspectRatio: 1.3,
+              child: Image.asset(listing.imageAsset, fit: BoxFit.cover),
+            ),
+            Padding(
+              padding: EdgeInsets.all(8.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    listing.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      height: 1.2,
+                    ),
+                  ),
+                  SizedBox(height: 6.h),
+                  Text(
+                    listing.price,
+                    style: const TextStyle(
+                      color: Color(0xFF2F80ED),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

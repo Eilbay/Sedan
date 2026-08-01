@@ -1525,7 +1525,7 @@ class _MockDetailsPriceRow extends StatelessWidget {
     return Row(
       children: [
         Container(
-          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 9.h),
+          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
           decoration: BoxDecoration(
             color: const Color(0xFF2F80ED),
             borderRadius: BorderRadius.circular(8),
@@ -1535,17 +1535,17 @@ class _MockDetailsPriceRow extends StatelessWidget {
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w900,
-              fontSize: 16,
+              fontSize: 13,
             ),
           ),
         ),
-        SizedBox(width: 12.w),
+        SizedBox(width: 10.w),
         Text(
           usdPrice,
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w800,
-            fontSize: 16,
+            fontSize: 13,
           ),
         ),
         const Spacer(),

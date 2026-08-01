@@ -1358,6 +1358,23 @@ class _SedanHomeListingCard extends StatelessWidget {
   final VoidCallback onSavedTap;
   final bool isWide;
 
+  static String _formatNumber(num value) {
+    final text = value.round().toString();
+    final buffer = StringBuffer();
+    for (var i = 0; i < text.length; i++) {
+      if (i > 0 && (text.length - i) % 3 == 0) buffer.write(' ');
+      buffer.write(text[i]);
+    }
+    return buffer.toString();
+  }
+
+  String get _somPrice {
+    final raw = listing.price.replaceAll(RegExp(r'[^0-9]'), '').trim();
+    final usd = int.tryParse(raw) ?? 0;
+    if (usd == 0) return listing.price;
+    return '${_formatNumber(usd * 89)} сом';
+  }
+
   @override
   Widget build(BuildContext context) {
     final bg = isDarkMode ? const Color(0xFF111116) : Colors.white;
@@ -1429,7 +1446,7 @@ class _SedanHomeListingCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          listing.price,
+                          _somPrice,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
@@ -1465,10 +1482,10 @@ class _SedanHomeListingCard extends StatelessWidget {
                           fontWeight: FontWeight.w800,
                         ),
                       ),
-                      SizedBox(height: 8.h),
+                      SizedBox(height: 6.h),
                       Text(
                         listing.condition,
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: sub,
@@ -1476,7 +1493,32 @@ class _SedanHomeListingCard extends StatelessWidget {
                           height: 1.25,
                         ),
                       ),
-                      SizedBox(height: 8.h),
+                      SizedBox(height: 4.h),
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: _somPrice,
+                              style: const TextStyle(
+                                color: _HomePageState._accent,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            TextSpan(
+                              text: ' · ${listing.price}',
+                              style: TextStyle(
+                                color: fg,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: 6.h),
                       Row(
                         children: [
                           Container(
@@ -1491,18 +1533,49 @@ class _SedanHomeListingCard extends StatelessWidget {
                             ),
                             child: ClipOval(
                               child: Image.asset(
-                                'assets/icons/profile.png',
+                                'assets/sedan.png',
                                 fit: BoxFit.cover,
                               ),
                             ),
                           ),
                           SizedBox(width: 6.w),
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    'Aibek.Auto',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: fg,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 2.w),
+                                const Icon(
+                                  Icons.verified,
+                                  color: _HomePageState._accent,
+                                  size: 12,
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(width: 4.w),
+                          const Icon(
+                            Icons.star,
+                            size: 13,
+                            color: Color(0xFFFFC107),
+                          ),
+                          SizedBox(width: 2.w),
                           Text(
-                            'Sedan.kg',
+                            '5.0',
                             style: TextStyle(
-                              color: fg,
-                              fontSize: 12,
+                              fontSize: 11,
                               fontWeight: FontWeight.w600,
+                              color: fg,
                             ),
                           ),
                         ],

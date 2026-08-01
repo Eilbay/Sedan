@@ -1,6 +1,9 @@
 import 'package:collection/collection.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:optombai/bloc/pit_bloc/pit_bloc.dart';
+import 'package:optombai/bloc/pit_bloc/pit_event.dart';
 import 'package:optombai/core/di/injection.dart';
+import 'package:optombai/features/promotion/presentation/widgets/insufficient_balance_dialog.dart';
 import 'package:optombai/features/promotion/presentation/widgets/promotion_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:card_swiper/card_swiper.dart';
@@ -98,6 +101,10 @@ class _StateUserProductDetailsState extends State<StateUserProductDetails> {
       case 'promote':
         await _handlePromote();
         break;
+
+      case 'stopPromote':
+        _handleStopMockPromote();
+        break;
     }
   }
 
@@ -111,7 +118,85 @@ class _StateUserProductDetailsState extends State<StateUserProductDetails> {
     });
   }
 
+  // DEMO MODE
+  static const double _mockPromoCost = 100;
+
+  bool get _isMockProduct => widget.id.startsWith('mock-');
+
+  bool get _isCurrentlyPromoted =>
+      _promotionPhase == _PromotionPhase.promoted ||
+      (widget.results.isPromoted &&
+          (widget.results.promoEndAt?.isAfter(DateTime.now()) ?? false));
+
+  Future<void> _handleMockPromote() async {
+    if (_isCurrentlyPromoted) return;
+
+    final balance = context.read<PitBloc>().state.balance;
+    if (balance < _mockPromoCost) {
+      await InsufficientBalanceDialog.show(
+        context,
+        requiredAmount: _mockPromoCost,
+      );
+      return;
+    }
+
+    context
+        .read<PitBloc>()
+        .add(const MockDebitPitEvent(amount: _mockPromoCost));
+
+    widget.results.isPromoted = true;
+    widget.results.promoEndAt ??= DateTime.now().add(const Duration(days: 7));
+
+    _hasChanges = true;
+    context.read<ProductBloc>().add(MarkProductPromotedLocally(widget.id));
+    _startModerationFlow();
+    showMessage(context, ['Продвижение запущено!'], EnumStatusMessage.success);
+  }
+
+  void _handleStopMockPromote() {
+    showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Остановить продвижение?'),
+        content: const Text(
+          'Товар перестанет показываться в рекламных местах.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Остановить'),
+          ),
+        ],
+      ),
+    ).then((confirmed) {
+      if (confirmed != true || !mounted) return;
+
+      widget.results.isPromoted = false;
+      widget.results.promoEndAt = null;
+      _moderationTimer?.cancel();
+
+      setState(() {
+        _localProduct = widget.results;
+        _editedLocally = true;
+        _promotionPhase = _PromotionPhase.none;
+        _hasChanges = true;
+      });
+
+      showMessage(
+          context, ['Продвижение остановлено'], EnumStatusMessage.success);
+    });
+  }
+
   Future<void> _handlePromote() async {
+    if (_isMockProduct) {
+      await _handleMockPromote();
+      return;
+    }
+
     final created = await PromotionDialog.show(
       context,
       postId: widget.id,
@@ -331,21 +416,34 @@ class _ProductHeaderRow extends StatelessWidget {
   List<PopupMenuEntry<String>> _buildMenuItems(
     bool stateSwitch,
     bool showPromote,
+    bool isPromoted,
   ) {
     // Promote entry is server-gated via FeatureFlagsCubit('promoteButton'),
     // same mechanism as ButtonVisibleGate — hidden until the flag is set.
     final items = <PopupMenuEntry<String>>[
       if (showPromote) ...[
-        PopupMenuItem<String>(
-          value: 'promote',
-          child: Row(
-            children: <Widget>[
-              const Icon(Icons.trending_up, color: Color(0xff0095D5)),
-              SizedBox(width: 8.w),
-              const TextTranslated("Продвинуть"),
-            ],
+        if (isPromoted)
+          PopupMenuItem<String>(
+            value: 'stopPromote',
+            child: Row(
+              children: <Widget>[
+                const Icon(Icons.trending_down, color: Colors.orange),
+                SizedBox(width: 8.w),
+                const TextTranslated("Остановить продвижение"),
+              ],
+            ),
+          )
+        else
+          PopupMenuItem<String>(
+            value: 'promote',
+            child: Row(
+              children: <Widget>[
+                const Icon(Icons.trending_up, color: Color(0xff0095D5)),
+                SizedBox(width: 8.w),
+                const TextTranslated("Продвинуть"),
+              ],
+            ),
           ),
-        ),
         const PopupMenuDivider(),
       ],
     ];
@@ -384,7 +482,11 @@ class _ProductHeaderRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final showPromote =
-        context.watch<FeatureFlagsCubit>().state.isVisible('promoteButton');
+        context.watch<FeatureFlagsCubit>().state.isVisible('promoteButton') ||
+            results.id.startsWith('mock-');
+    final isCurrentlyPromoted = promotionPhase == _PromotionPhase.promoted ||
+        (results.isPromoted &&
+            (results.promoEndAt?.isAfter(DateTime.now()) ?? false));
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -403,9 +505,7 @@ class _ProductHeaderRow extends StatelessWidget {
               ),
               if (promotionPhase == _PromotionPhase.moderation)
                 const _PromotionBadge(moderation: true)
-              else if (promotionPhase == _PromotionPhase.promoted ||
-                  (results.isPromoted &&
-                      (results.promoEndAt?.isAfter(DateTime.now()) ?? false)))
+              else if (isCurrentlyPromoted)
                 const _PromotionBadge(),
             ],
           ),
@@ -415,7 +515,8 @@ class _ProductHeaderRow extends StatelessWidget {
           child: PopupMenuButton<String>(
             color: isDarkMode ? const Color(0xff192536) : Colors.white,
             onSelected: onMenuAction,
-            itemBuilder: (_) => _buildMenuItems(isDarkMode, showPromote),
+            itemBuilder: (_) =>
+                _buildMenuItems(isDarkMode, showPromote, isCurrentlyPromoted),
             icon: const Icon(Icons.more_horiz, color: Color(0xff808080)),
             offset: const Offset(0, 50),
           ),
