@@ -10,8 +10,6 @@ import 'package:optombai/core/appColors.dart';
 import 'package:optombai/core/dark/dark_background.dart';
 import 'package:optombai/core/import_links.dart';
 import 'package:optombai/data/mock/sedan_mock_listings.dart';
-import 'package:optombai/data/models/account/user/socials/social_owner.dart';
-import 'package:optombai/data/models/account/user/socials/social_type.dart';
 import 'package:optombai/features/notifications/presentation/widgets/notification_bell_icon.dart';
 import 'package:optombai/features/promotion/presentation/widgets/insufficient_balance_dialog.dart';
 import 'package:optombai/widgets/product/market_product_card.dart';
@@ -45,8 +43,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 💳 Кредит и рассрочка
 📄 Полное оформление документов
 ''';
-  static const _mockProfilePhone = '0555506311';
-  static const _mockProfileWhatsApp = '996555506311';
 
   int currentIndex = 0;
   final ScrollController _controller = ScrollController();
@@ -94,7 +90,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.all(12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
   }
@@ -128,7 +125,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             content: const Text('Продвижение остановлено'),
             behavior: SnackBarBehavior.floating,
             margin: const EdgeInsets.all(12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
     });
@@ -157,12 +155,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   User _mockProfileUser() {
-    final mocked = User(
+    return User(
       id: 'mock-aibek-auto',
       username: 'Aibek.Auto',
       description: _mockProfileDescription,
       about_us: _mockProfileAboutUs.trim(),
-      phone_number: _mockProfilePhone,
       userType: 'auto_salon',
       image: null,
       postsCount: 2,
@@ -171,22 +168,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       is_active: true,
       is_verified: true,
     );
-
-    mocked.socials = const [
-      SocialOwner(
-        id: -1,
-        owner: 'mock-aibek-auto',
-        link: _mockProfileWhatsApp,
-        socialType: SocialType(
-          id: -1,
-          title: 'WhatsApp',
-          domainUrl: 'https://wa.me/',
-          logo: 'assets/icons/socials_dark/whatsapp_dark.png',
-        ),
-      ),
-    ];
-
-    return mocked;
   }
 
   Widget _topBar(BuildContext context, bool isDark, bool isCurrentUser,
@@ -1000,7 +981,8 @@ class _MockListingDetailsPageState extends State<_MockListingDetailsPage> {
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.all(12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
   }
@@ -1034,7 +1016,8 @@ class _MockListingDetailsPageState extends State<_MockListingDetailsPage> {
             content: const Text('Продвижение остановлено'),
             behavior: SnackBarBehavior.floating,
             margin: const EdgeInsets.all(12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
     });
@@ -1880,4 +1863,3 @@ class _MockProfileReviewCard extends StatelessWidget {
     );
   }
 }
-

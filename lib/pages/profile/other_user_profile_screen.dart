@@ -51,19 +51,43 @@ class _OtherUserProfileState extends State<OtherUserProfile> {
   int? choseMain = 2;
   final ScrollController _controller = ScrollController();
 
+  // DEMO MODE
+  bool get _isMockOwner => widget.user.startsWith('mock-');
+
+  // No phone/WhatsApp here on purpose — a made-up number could turn out to
+  // belong to a real person, and there's no way to verify one is unassigned.
+  User _mockAgencyProfile() {
+    return User(
+      id: widget.user,
+      username: widget.username.isNotEmpty ? widget.username : 'Aibek.Auto',
+      description:
+          'Автосалон «Aibek.Auto» — большой выбор автомобилей на любой вкус и бюджет!',
+      userType: 'auto_salon',
+      image: null,
+      is_verified: true,
+      is_active: true,
+      rating: 5,
+      reviewsCount: 3,
+      postsCount: 2,
+    );
+  }
+
   @override
   void initState() {
     super.initState();
     BlocProvider.of<ProductBloc>(context)
         .add(GetProfileProductsEvent(widget.username));
-    BlocProvider.of<StoreReviewBloc>(context)
-        .add(AllStoreReviewEvent(widget.user));
-    BlocProvider.of<ImageBloc>(context).add(GetAllImage(widget.user));
-    BlocProvider.of<DocumentBloc>(context)
-        .add(GetAllDocumentImage(widget.user));
-    BlocProvider.of<UserBloc>(context).add(UserOtherEvent(widget.user));
-    BlocProvider.of<UserBloc>(context)
-        .add(UserOtherWithoutTokenEvent(widget.user));
+
+    if (!_isMockOwner) {
+      BlocProvider.of<StoreReviewBloc>(context)
+          .add(AllStoreReviewEvent(widget.user));
+      BlocProvider.of<ImageBloc>(context).add(GetAllImage(widget.user));
+      BlocProvider.of<DocumentBloc>(context)
+          .add(GetAllDocumentImage(widget.user));
+      BlocProvider.of<UserBloc>(context).add(UserOtherEvent(widget.user));
+      BlocProvider.of<UserBloc>(context)
+          .add(UserOtherWithoutTokenEvent(widget.user));
+    }
 
     _controller.addListener(_onScroll);
   }
@@ -136,7 +160,7 @@ class _OtherUserProfileState extends State<OtherUserProfile> {
       // deleted. Show the matching explanatory stub instead of an empty
       // profile — and if the viewer is the one who blocked them, expose an
       // unblock shortcut.
-      child: (blockedByThem || notFound)
+      child: (!_isMockOwner && (blockedByThem || notFound))
           ? _NotFoundProfileScaffold(
               userId: widget.user,
               username: widget.username,
@@ -144,8 +168,9 @@ class _OtherUserProfileState extends State<OtherUserProfile> {
             )
           : _buildLoadedProfile(
               context: context,
-              bloc: bloc,
-              blocWithoutToken: blocWithoutToken,
+              bloc: _isMockOwner ? _mockAgencyProfile() : bloc,
+              blocWithoutToken:
+                  _isMockOwner ? _mockAgencyProfile() : blocWithoutToken,
               isRegister: isRegister,
               stateUser: stateUser,
               isCurrentUser2: isCurrentUser2,

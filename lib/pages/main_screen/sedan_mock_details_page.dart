@@ -1,5 +1,7 @@
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:optombai/app/router/app_router.dart';
 import 'package:optombai/data/mock/sedan_mock_listings.dart';
 import 'package:optombai/widgets/bottom_nav.dart';
 
@@ -375,44 +377,57 @@ class _PriceRow extends StatelessWidget {
 class _SellerCard extends StatelessWidget {
   const _SellerCard();
 
+  // DEMO MODE
+  static const _ownerId = 'mock-aibek-auto';
+  static const _ownerUsername = 'Aibek.Auto';
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: const Color(0xFF14181F),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => context.router.push(
+        OtherUserProfileRoute(
+          user: _ownerId,
+          username: _ownerUsername,
+        ),
       ),
-      child: Row(
-        children: [
-          const CircleAvatar(
-            radius: 24,
-            backgroundImage: AssetImage('assets/icons/support_agent.jpg'),
-          ),
-          SizedBox(width: 12.w),
-          const Expanded(
-            child: Row(
-              children: [
-                Flexible(
-                  child: Text(
-                    'Aibek.Auto',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900,
+      child: Container(
+        padding: EdgeInsets.all(14.w),
+        decoration: BoxDecoration(
+          color: const Color(0xFF14181F),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+        ),
+        child: Row(
+          children: [
+            const CircleAvatar(
+              radius: 24,
+              backgroundImage: AssetImage('assets/icons/support_agent.jpg'),
+            ),
+            SizedBox(width: 12.w),
+            const Expanded(
+              child: Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      _ownerUsername,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ),
-                ),
-                SizedBox(width: 6),
-                Icon(Icons.verified, color: Color(0xFF2F80ED), size: 18),
-              ],
+                  SizedBox(width: 6),
+                  Icon(Icons.verified, color: Color(0xFF2F80ED), size: 18),
+                ],
+              ),
             ),
-          ),
-          const Icon(Icons.chevron_right, color: Colors.white60),
-        ],
+            const Icon(Icons.chevron_right, color: Colors.white60),
+          ],
+        ),
       ),
     );
   }

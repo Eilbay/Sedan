@@ -624,14 +624,38 @@ class _ProfileHeaderState extends State<ProfileHeader> {
     );
   }
 
+  // DEMO MODE
+  void _showComingSoon(BuildContext context, String message) {
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          content: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.auto_awesome, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Expanded(child: Text(message)),
+            ],
+          ),
+          backgroundColor: _purple,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(12),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+  }
+
   Widget _contactCards(BuildContext context, bool isDark) {
+    final isMockUser = widget.currentUser.id.startsWith('mock-');
     final whatsapp = _findSocial('WhatsApp');
     final hasPhone = widget.currentUser.phone_number.trim().isNotEmpty;
-    final showChat = widget.currentUser.userType != 'auto_salon';
+    final showChat = widget.currentUser.userType != 'auto_salon' || isMockUser;
 
     final cards = <Widget>[];
 
-    if (whatsapp != null) {
+    if (whatsapp != null || isMockUser) {
       cards.add(_contactCard(
         isDark: isDark,
         icon: Icons.chat,
@@ -639,8 +663,11 @@ class _ProfileHeaderState extends State<ProfileHeader> {
         iconBg: _whatsapp,
         title: 'Написать\nв WhatsApp',
         subtitle: 'Быстрый ответ',
-        onTap: () =>
-            _launchUrlSafe(whatsapp.socialType.domainUrl + whatsapp.link),
+        onTap: isMockUser
+            ? () => _showComingSoon(
+                context, 'WhatsApp будет доступен в ближайшее время')
+            : () =>
+                _launchUrlSafe(whatsapp!.socialType.domainUrl + whatsapp.link),
       ));
     }
 
@@ -656,7 +683,7 @@ class _ProfileHeaderState extends State<ProfileHeader> {
       ));
     }
 
-    if (hasPhone) {
+    if (hasPhone || isMockUser) {
       cards.add(_contactCard(
         isDark: isDark,
         icon: Icons.call,
@@ -664,7 +691,10 @@ class _ProfileHeaderState extends State<ProfileHeader> {
         iconBg: _blue.withValues(alpha: 0.12),
         title: 'Позвонить',
         subtitle: 'Связаться\nпо телефону',
-        onTap: () => _launchPhoneNumber(widget.currentUser.phone_number),
+        onTap: isMockUser
+            ? () => _showComingSoon(
+                context, 'Звонок будет доступен в ближайшее время')
+            : () => _launchPhoneNumber(widget.currentUser.phone_number),
       ));
     }
 
@@ -759,6 +789,27 @@ class _ProfileHeaderState extends State<ProfileHeader> {
     }
 
     final targetUserId = widget.currentUser.id;
+
+    // DEMO MODE
+    if (targetUserId.startsWith('mock-')) {
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Сообщение отправлено! Продавец ответит вам в ближайшее время.',
+            ),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.all(12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+            ),
+          ),
+        );
+      return;
+    }
+
     if (!targetUserId.isValidUuid) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Не удалось определить пользователя')),
