@@ -1,5 +1,7 @@
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:optombai/data/mock/sedan_mock_listings.dart';
 import 'package:optombai/data/models/report/report_target_type.dart';
+import 'package:optombai/pages/main_screen/sedan_mock_details_page.dart';
 import 'package:optombai/pages/profile/edit/widgets/media_tile.dart';
 import 'package:optombai/widgets/bottom_nav.dart';
 import 'package:optombai/widgets/moderation/user_actions_sheet.dart';
@@ -75,10 +77,9 @@ class _OtherUserProfileState extends State<OtherUserProfile> {
   @override
   void initState() {
     super.initState();
-    BlocProvider.of<ProductBloc>(context)
-        .add(GetProfileProductsEvent(widget.username));
-
     if (!_isMockOwner) {
+      BlocProvider.of<ProductBloc>(context)
+          .add(GetProfileProductsEvent(widget.username));
       BlocProvider.of<StoreReviewBloc>(context)
           .add(AllStoreReviewEvent(widget.user));
       BlocProvider.of<ImageBloc>(context).add(GetAllImage(widget.user));
@@ -234,8 +235,9 @@ class _OtherUserProfileState extends State<OtherUserProfile> {
                           previous.profileProductsTotalCount !=
                               current.profileProductsTotalCount,
                       builder: (context, productState) {
-                        final int postCounts =
-                            productState.profileProductsTotalCount;
+                        final int postCounts = _isMockOwner
+                            ? sedanMockListings.length
+                            : productState.profileProductsTotalCount;
                         final headerKind = !isRegister
                             ? 'SecondHeader:guest'
                             : ((widget.productType == 0 ||
@@ -294,6 +296,47 @@ class _OtherUserProfileState extends State<OtherUserProfile> {
                         ]),
                     Builder(builder: (_) {
                       if (currentIndex == 0) {
+                        // DEMO MODE
+                        if (_isMockOwner) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            child: GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate:
+                                  const SliverGridDelegateWithMaxCrossAxisExtent(
+                                maxCrossAxisExtent: 150,
+                                mainAxisSpacing: 5,
+                                childAspectRatio: 1 / 1,
+                                crossAxisSpacing: 5,
+                              ),
+                              itemCount: sedanMockListings.length,
+                              itemBuilder: (BuildContext ctx, index) {
+                                final listing = sedanMockListings[index];
+                                return RepaintBoundary(
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute<void>(
+                                            builder: (_) =>
+                                                SedanMockDetailsPage(
+                                                    listing: listing),
+                                          ),
+                                        );
+                                      },
+                                      child: Image.asset(
+                                        listing.imageAsset,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          );
+                        }
                         return BlocBuilder<ProductBloc, ProductState>(
                           buildWhen: (previous, current) =>
                               previous.profileProducts !=

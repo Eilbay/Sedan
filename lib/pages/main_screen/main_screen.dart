@@ -1298,27 +1298,51 @@ class _SedanMockListingsSliver extends StatelessWidget {
   final Set<String> savedListings;
   final ValueChanged<String> onSavedTap;
 
+  Widget _gridFor(List<SedanMockListing> items, {required Key key}) {
+    return SliverGrid(
+      key: key,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 16.h,
+        crossAxisSpacing: 12.w,
+        mainAxisExtent: 305.h,
+      ),
+      delegate: SliverChildBuilderDelegate(
+        (context, index) => _SedanHomeListingCard(
+          listing: items[index],
+          isDarkMode: isDarkMode,
+          isSaved: savedListings.contains(items[index].categoryKey),
+          onSavedTap: () => onSavedTap(items[index].categoryKey),
+        ),
+        childCount: items.length,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (isGridLayout) {
-      return SliverGrid(
-        key: const ValueKey('sedan_mock_grid'),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 16.h,
-          crossAxisSpacing: 12.w,
-          mainAxisExtent: 268.h,
-        ),
-        delegate: SliverChildBuilderDelegate(
-          (context, index) => _SedanHomeListingCard(
-            listing: listings[index],
-            isDarkMode: isDarkMode,
-            isSaved: savedListings.contains(listings[index].categoryKey),
-            onSavedTap: () => onSavedTap(listings[index].categoryKey),
-          ),
-          childCount: listings.length,
-        ),
-      );
+      if (listings.length >= 6) {
+        final firstBatch = listings.sublist(0, 4);
+        final rest = listings.sublist(4);
+        return SliverMainAxisGroup(
+          slivers: [
+            _gridFor(firstBatch, key: const ValueKey('sedan_mock_grid_1')),
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.only(top: 16),
+                child: _MockPromoBanner(),
+              ),
+            ),
+            SliverPadding(
+              padding: EdgeInsets.only(top: 16.h),
+              sliver: _gridFor(rest, key: const ValueKey('sedan_mock_grid_2')),
+            ),
+          ],
+        );
+      }
+
+      return _gridFor(listings, key: const ValueKey('sedan_mock_grid'));
     }
 
     return SliverList(
@@ -1338,6 +1362,25 @@ class _SedanMockListingsSliver extends StatelessWidget {
           ),
         ),
         childCount: listings.length,
+      ),
+    );
+  }
+}
+
+class _MockPromoBanner extends StatelessWidget {
+  const _MockPromoBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: AspectRatio(
+        aspectRatio: 327 / 140,
+        child: Image.asset(
+          'assets/banners/mock_banner.png',
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+        ),
       ),
     );
   }
@@ -1433,28 +1476,6 @@ class _SedanHomeListingCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    Positioned(
-                      left: 8,
-                      bottom: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _HomePageState._accent,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          _somPrice,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
                     if (listing.isVip)
                       const Positioned(
                         left: 8,
@@ -1482,103 +1503,37 @@ class _SedanHomeListingCard extends StatelessWidget {
                           fontWeight: FontWeight.w800,
                         ),
                       ),
-                      SizedBox(height: 6.h),
+                      SizedBox(height: 4.h),
+                      Text(
+                        listing.price,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: _HomePageState._accent,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      Text(
+                        _somPrice,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: sub,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(height: 4.h),
                       Text(
                         listing.condition,
-                        maxLines: 1,
+                        maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: sub,
                           fontSize: 12,
                           height: 1.25,
                         ),
-                      ),
-                      SizedBox(height: 4.h),
-                      Text.rich(
-                        TextSpan(
-                          children: [
-                            TextSpan(
-                              text: _somPrice,
-                              style: const TextStyle(
-                                color: _HomePageState._accent,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            TextSpan(
-                              text: ' · ${listing.price}',
-                              style: TextStyle(
-                                color: fg,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      SizedBox(height: 6.h),
-                      Row(
-                        children: [
-                          Container(
-                            width: 22.w,
-                            height: 22.w,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: (isDarkMode ? Colors.white : Colors.black)
-                                    .withValues(alpha: 0.15),
-                              ),
-                            ),
-                            child: ClipOval(
-                              child: Image.asset(
-                                'assets/sedan.png',
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: 6.w),
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    'Aibek.Auto',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: fg,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(width: 2.w),
-                                const Icon(
-                                  Icons.verified,
-                                  color: _HomePageState._accent,
-                                  size: 12,
-                                ),
-                              ],
-                            ),
-                          ),
-                          SizedBox(width: 4.w),
-                          const Icon(
-                            Icons.star,
-                            size: 13,
-                            color: Color(0xFFFFC107),
-                          ),
-                          SizedBox(width: 2.w),
-                          Text(
-                            '5.0',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: fg,
-                            ),
-                          ),
-                        ],
                       ),
                       const Spacer(),
                       Row(

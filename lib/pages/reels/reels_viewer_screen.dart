@@ -998,6 +998,9 @@ class _ReelShimmer extends StatelessWidget {
 /// Saves the current reel to the user's favorites ("Сохранённые публикации").
 /// Replaces the old category filter — a reel is a video post, so it is
 /// favorited by its post id exactly like a product.
+// DEMO MODE
+final Set<String> _mockSavedReelIds = <String>{};
+
 class _ReelFavoriteButton extends StatelessWidget {
   const _ReelFavoriteButton({required this.reel, required this.isRegister});
 
@@ -1036,6 +1039,10 @@ class _ReelFavoriteButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (isSedanMockReelId(reel.id)) {
+      return _MockReelFavoriteButton(reel: reel, isRegister: isRegister);
+    }
+
     return BlocBuilder<FavoriteBloc, FavoriteState>(
       buildWhen: (prev, curr) => prev.results != curr.results,
       builder: (context, state) {
@@ -1049,6 +1056,52 @@ class _ReelFavoriteButton extends StatelessWidget {
           onTap: () => _toggle(context, favorite),
         );
       },
+    );
+  }
+}
+
+class _MockReelFavoriteButton extends StatefulWidget {
+  const _MockReelFavoriteButton({required this.reel, required this.isRegister});
+
+  final ReelModel reel;
+  final bool isRegister;
+
+  @override
+  State<_MockReelFavoriteButton> createState() =>
+      _MockReelFavoriteButtonState();
+}
+
+class _MockReelFavoriteButtonState extends State<_MockReelFavoriteButton> {
+  late bool _isSaved = _mockSavedReelIds.contains(widget.reel.id);
+
+  void _toggle() {
+    if (!widget.isRegister) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Чтобы сохранить публикацию, зарегистрируйтесь'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isSaved = !_isSaved;
+      if (_isSaved) {
+        _mockSavedReelIds.add(widget.reel.id);
+      } else {
+        _mockSavedReelIds.remove(widget.reel.id);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _ReelActionButton(
+      icon: _isSaved ? Icons.bookmark : Icons.bookmark_border,
+      color: _isSaved ? const Color(0xFF0095D5) : Colors.white,
+      label: '',
+      onTap: _toggle,
     );
   }
 }

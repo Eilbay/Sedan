@@ -152,8 +152,8 @@ class _SecondHeaderState extends State<SecondHeader> {
 
   Widget _identityRow(BuildContext context, bool isDark) {
     final user = widget.currentUser;
-    final hasImage = user.image is String &&
-        (user.image as String).trim().isNotEmpty;
+    final hasImage =
+        user.image is String && (user.image as String).trim().isNotEmpty;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -231,12 +231,12 @@ class _SecondHeaderState extends State<SecondHeader> {
           user.userType == '4' ? 'Поставщик' : 'Производитель',
           style: const TextStyle(color: Colors.grey),
         ),
-        if (verified)
+        /*if (verified)
           _checkPill(
             'Проверен',
             isDark: isDark,
             onTap: () => context.router.push(const UsersRoute()),
-          ),
+          ),*/
         if (hasQuality)
           _checkPill(
             'Качество',

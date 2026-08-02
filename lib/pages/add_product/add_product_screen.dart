@@ -368,16 +368,6 @@ class _AddProductScreenState extends State<AddProductScreen>
                   children: [
                     _ScreenTitle(),
                     SizedBox(height: 16.h),
-                    _PostTypeSelector(
-                      selectedValue: selectedValue,
-                      onChanged: (value) {
-                        setState(() {
-                          selectedValue = value.toString();
-                          product.postType = selectedValue;
-                        });
-                      },
-                    ),
-                    SizedBox(height: 16.h),
                     _MediaSection(
                       tabController: _tabController,
                       mediaTabIndex: _mediaTabIndex,
@@ -1223,88 +1213,6 @@ class _CurrencyToggle extends StatelessWidget {
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: isSelected ? const Color(0xFF34C759) : Colors.grey,
-              ),
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-}
-
-class _PostTypeSelector extends StatelessWidget {
-  final String selectedValue;
-  final ValueChanged<Object?> onChanged;
-
-  const _PostTypeSelector({
-    required this.selectedValue,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = context.select((ThemeNotifier n) => n.isDarkMode);
-
-    return Row(
-      children: listMainPostType2.map((item) {
-        final isSelected = selectedValue == item.id.toString();
-        final borderColor = isSelected
-            ? Theme.of(context).colorScheme.primary
-            : (isDark ? const Color(0xff1A2A42) : const Color(0xffCFDEFB));
-        final bgColor = isSelected
-            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.08)
-            : (isDark ? const Color(0xff192536) : Colors.white);
-
-        return Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(
-              right: item == listMainPostType2.first ? 4 : 0,
-              left: item == listMainPostType2.last ? 4 : 0,
-            ),
-            child: InkWell(
-              onTap: () => onChanged(item.id.toString()),
-              borderRadius: BorderRadius.circular(14),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  borderRadius: BorderRadius.circular(14),
-                  border:
-                      Border.all(color: borderColor, width: isSelected ? 2 : 1),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      item.id == 2 ? Icons.storefront : Icons.search,
-                      size: 20,
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.grey,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextTranslated(
-                        item.name,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight:
-                              isSelected ? FontWeight.w600 : FontWeight.w400,
-                          color: isSelected
-                              ? Theme.of(context).colorScheme.primary
-                              : null,
-                        ),
-                      ),
-                    ),
-                    if (isSelected)
-                      Icon(
-                        Icons.check_circle,
-                        size: 18,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                  ],
-                ),
               ),
             ),
           ),

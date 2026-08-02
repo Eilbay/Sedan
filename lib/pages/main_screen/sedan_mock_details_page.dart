@@ -2,9 +2,11 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:optombai/app/router/app_router.dart';
+import 'package:optombai/data/models/report/report_target_type.dart';
 import 'package:optombai/data/mock/sedan_mock_listings.dart';
 import 'package:optombai/widgets/bottom_nav.dart';
-import 'package:optombai/widgets/product/details/comment_stars.dart';
+import 'package:optombai/widgets/moderation/user_actions_sheet.dart';
+import 'package:share_plus/share_plus.dart';
 
 class SedanMockDetailsPage extends StatefulWidget {
   const SedanMockDetailsPage({super.key, required this.listing});
@@ -49,12 +51,9 @@ class _SedanMockDetailsPageState extends State<SedanMockDetailsPage> {
   @override
   Widget build(BuildContext context) {
     final listing = widget.listing;
-    final categoryTitle = sedanMockCategoryTitleForKey(listing.categoryKey);
 
     return Scaffold(
       backgroundColor: Colors.black,
-      bottomNavigationBar:
-          const BottomNav(currentIndexOverride: -1, passive: true),
       body: SafeArea(
         bottom: false,
         child: CustomScrollView(
@@ -63,7 +62,7 @@ class _SedanMockDetailsPageState extends State<SedanMockDetailsPage> {
               child: Padding(
                 padding: EdgeInsets.fromLTRB(12.w, 10.h, 12.w, 0),
                 child: _TopBar(
-                  title: listing.title,
+                  listing: listing,
                   isSaved: _isSaved,
                   onBack: () => Navigator.of(context).maybePop(),
                   onSavedTap: () => setState(() => _isSaved = !_isSaved),
@@ -77,37 +76,20 @@ class _SedanMockDetailsPageState extends State<SedanMockDetailsPage> {
                   [
                     _HeroImage(listing: listing),
                     SizedBox(height: 14.h),
-                    _PriceRow(
+                    _SellerPriceCard(
+                      listing: listing,
                       somPrice: _somPrice,
                       usdPrice: _usdPrice,
-                      views: 128,
                     ),
-                    SizedBox(height: 14.h),
-                    Text(
-                      listing.title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                    SizedBox(height: 8.h),
-                    _RatingAndArticleRow(listing: listing),
-                    SizedBox(height: 14.h),
-                    const _SellerCard(),
-                    SizedBox(height: 24.h),
-                    const _SectionTitle('Описание'),
                     SizedBox(height: 10.h),
-                    Text(
-                      listing.condition,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 15,
-                        height: 1.45,
-                      ),
-                    ),
-                    SizedBox(height: 26.h),
+                    _StatsRow(listing: listing),
+                    SizedBox(height: 24.h),
+                    const _SectionTitle('О товаре'),
+                    SizedBox(height: 16.h),
+                    _InfoRow(label: 'Название', value: listing.title),
+                    _InfoRow(label: 'Описание', value: listing.condition),
+                    const _InfoRow(label: 'Регион', value: 'Бишкек'),
+                    SizedBox(height: 24.h),
                     const _SectionTitle('Кредит и финансирование'),
                     SizedBox(height: 12.h),
                     _FinanceTabs(
@@ -127,17 +109,6 @@ class _SedanMockDetailsPageState extends State<SedanMockDetailsPage> {
                         _termMonths = value;
                       }),
                     ),
-                    SizedBox(height: 24.h),
-                    const _SectionTitle('О товаре'),
-                    SizedBox(height: 16.h),
-                    _InfoRow(label: 'Название', value: listing.title),
-                    _InfoRow(
-                      label: 'Категория',
-                      value: categoryTitle,
-                      valueColor: const Color(0xFF2F80ED),
-                    ),
-                    for (final spec in listing.specs)
-                      _InfoRow(label: spec.label, value: spec.value),
                     SizedBox(height: 28.h),
                     _SimilarListingsSection(currentListing: listing),
                     SizedBox(height: 28.h),
@@ -164,22 +135,52 @@ class _SedanMockDetailsPageState extends State<SedanMockDetailsPage> {
           ],
         ),
       ),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _ContactButtonsRow(listing: listing),
+          const BottomNav(currentIndexOverride: -1, passive: true),
+        ],
+      ),
     );
   }
 }
 
 class _TopBar extends StatelessWidget {
   const _TopBar({
-    required this.title,
+    required this.listing,
     required this.isSaved,
     required this.onBack,
     required this.onSavedTap,
   });
 
-  final String title;
+  final SedanMockListing listing;
   final bool isSaved;
   final VoidCallback onBack;
   final VoidCallback onSavedTap;
+
+  // DEMO MODE
+  static const _ownerId = 'mock-aibek-auto';
+  static const _ownerUsername = 'Aibek.Auto';
+
+  void _onShare() {
+    final text = [
+      listing.title,
+      listing.price,
+      'Смотри на Sedan.kg',
+    ].join('\n');
+    SharePlus.instance.share(ShareParams(text: text));
+  }
+
+  void _onMore(BuildContext context) {
+    UserActionsSheet.show(
+      context,
+      userId: _ownerId,
+      username: _ownerUsername,
+      reportTargetType: ReportTargetType.post,
+      reportTargetId: 'mock-${sedanMockListings.indexOf(listing)}',
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -194,7 +195,7 @@ class _TopBar extends StatelessWidget {
           SizedBox(width: 8.w),
           Expanded(
             child: Text(
-              title.toUpperCase(),
+              listing.title.toUpperCase(),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
@@ -212,11 +213,11 @@ class _TopBar extends StatelessWidget {
             ),
           ),
           IconButton(
-            onPressed: () {},
+            onPressed: _onShare,
             icon: const Icon(Icons.share, color: Colors.white),
           ),
           IconButton(
-            onPressed: () {},
+            onPressed: () => _onMore(context),
             icon: const Icon(Icons.more_vert, color: Colors.white),
           ),
         ],
@@ -232,159 +233,30 @@ class _HeroImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final specs = listing.specs;
-    final year = specs.isNotEmpty ? specs.first.value : '-';
-    final engine = specs.length > 1 ? specs[1].value : '-';
-    final category = sedanMockCategoryTitleForKey(listing.categoryKey);
-
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
       child: AspectRatio(
         aspectRatio: 1.05,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset(listing.imageAsset, fit: BoxFit.cover),
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withValues(alpha: 0.08),
-                      Colors.black.withValues(alpha: 0.72),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              left: 16.w,
-              right: 16.w,
-              bottom: 20.h,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _HeroSpec(value: year, label: 'ГОД'),
-                  _HeroSpec(value: engine, label: 'ДВИГАТЕЛЬ'),
-                  _HeroSpec(value: category, label: 'КАТЕГОРИЯ'),
-                ],
-              ),
-            ),
-            Positioned(
-              bottom: 8.h,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF2F80ED),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+        child: Image.asset(listing.imageAsset, fit: BoxFit.cover),
       ),
     );
   }
 }
 
-class _HeroSpec extends StatelessWidget {
-  const _HeroSpec({required this.value, required this.label});
+/// DEMO MODE
+const _mockOwnerId = 'mock-aibek-auto';
+const _mockOwnerUsername = 'Aibek.Auto';
 
-  final String value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Flexible(
-      child: Text.rich(
-        TextSpan(
-          children: [
-            TextSpan(
-              text: '$value\n',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 17,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            TextSpan(
-              text: label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                height: 1.1,
-              ),
-            ),
-          ],
-        ),
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
-}
-
-class _PriceRow extends StatelessWidget {
-  const _PriceRow({
+class _SellerPriceCard extends StatelessWidget {
+  const _SellerPriceCard({
+    required this.listing,
     required this.somPrice,
     required this.usdPrice,
-    required this.views,
   });
 
+  final SedanMockListing listing;
   final String somPrice;
   final String usdPrice;
-  final int views;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
-          decoration: BoxDecoration(
-            color: const Color(0xFF2F80ED),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            somPrice,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w900,
-              fontSize: 13,
-            ),
-          ),
-        ),
-        SizedBox(width: 10.w),
-        Text(
-          usdPrice,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w800,
-            fontSize: 13,
-          ),
-        ),
-        const Spacer(),
-        const Icon(Icons.remove_red_eye_outlined, color: Colors.white70),
-        SizedBox(width: 4.w),
-        Text(views.toString(), style: const TextStyle(color: Colors.white70)),
-      ],
-    );
-  }
-}
-
-class _SellerCard extends StatelessWidget {
-  const _SellerCard();
-
-  // DEMO MODE
-  static const _ownerId = 'mock-aibek-auto';
-  static const _ownerUsername = 'Aibek.Auto';
 
   @override
   Widget build(BuildContext context) {
@@ -392,8 +264,8 @@ class _SellerCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(14),
       onTap: () => context.router.push(
         OtherUserProfileRoute(
-          user: _ownerId,
-          username: _ownerUsername,
+          user: _mockOwnerId,
+          username: _mockOwnerUsername,
         ),
       ),
       child: Container(
@@ -411,27 +283,177 @@ class _SellerCard extends StatelessWidget {
               backgroundImage: AssetImage('assets/sedan.png'),
             ),
             SizedBox(width: 12.w),
-            const Expanded(
-              child: Row(
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Flexible(
-                    child: Text(
-                      _ownerUsername,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
+                  const Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          _mockOwnerUsername,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
                       ),
-                    ),
+                      SizedBox(width: 6),
+                      Icon(Icons.verified, color: Color(0xFF2F80ED), size: 18),
+                    ],
                   ),
-                  SizedBox(width: 6),
-                  Icon(Icons.verified, color: Color(0xFF2F80ED), size: 18),
+                  SizedBox(height: 4.h),
+                  const Row(
+                    children: [
+                      Text('Рейтинг: 5.0',
+                          style:
+                              TextStyle(color: Colors.white70, fontSize: 13)),
+                      SizedBox(width: 4),
+                      Icon(Icons.star, color: Color(0xFFFFA800), size: 14),
+                    ],
+                  ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: Colors.white60),
+            SizedBox(width: 8.w),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  usdPrice,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 17,
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  somPrice,
+                  style: const TextStyle(
+                    color: Color(0xFF2F80ED),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatsRow extends StatelessWidget {
+  const _StatsRow({required this.listing});
+
+  final SedanMockListing listing;
+
+  @override
+  Widget build(BuildContext context) {
+    final articleNumber = 100000 + sedanMockListings.indexOf(listing);
+
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 8,
+      runSpacing: 4,
+      children: [
+        _StatsItem(
+            icon: Icons.remove_red_eye_outlined,
+            text: '${listing.views} просмотров'),
+        const Text('•', style: TextStyle(color: Colors.white38, fontSize: 12)),
+        const _StatsItem(
+            icon: Icons.calendar_month_outlined, text: 'Добавлено недавно'),
+        const Text('•', style: TextStyle(color: Colors.white38, fontSize: 12)),
+        Text('Арт: $articleNumber',
+            style: const TextStyle(color: Colors.white54, fontSize: 12)),
+      ],
+    );
+  }
+}
+
+class _StatsItem extends StatelessWidget {
+  const _StatsItem({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 15, color: Colors.white54),
+        const SizedBox(width: 4),
+        Text(text, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+      ],
+    );
+  }
+}
+
+class _ContactButtonsRow extends StatelessWidget {
+  const _ContactButtonsRow({required this.listing});
+
+  final SedanMockListing listing;
+
+  void _openOwner(BuildContext context) {
+    context.router.push(
+      OtherUserProfileRoute(
+        user: _mockOwnerId,
+        username: _mockOwnerUsername,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(12.w, 10.h, 12.w, 10.h),
+      decoration: const BoxDecoration(
+        color: Colors.black,
+        border: Border(top: BorderSide(color: Color(0x14FFFFFF))),
+      ),
+      child: SafeArea(
+        top: false,
+        bottom: false,
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => _openOwner(context),
+                icon: const Icon(Icons.chat_bubble_outline,
+                    color: Color(0xFF2F80ED)),
+                label: const Text('Написать'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF2F80ED),
+                  side: const BorderSide(color: Color(0xFF2F80ED)),
+                  padding: EdgeInsets.symmetric(vertical: 13.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(width: 10.w),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () => _openOwner(context),
+                icon: const Icon(Icons.call, color: Colors.white),
+                label: const Text('Позвонить'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2F80ED),
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: 13.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -457,6 +479,43 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
+class _BakAiLogo extends StatelessWidget {
+  const _BakAiLogo();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.account_balance, color: Color(0xFFE5234B), size: 20),
+        SizedBox(width: 4),
+        Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: 'Bak',
+                style: TextStyle(
+                  color: Color(0xFFE5234B),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
+              ),
+              TextSpan(
+                text: 'Ai',
+                style: TextStyle(
+                  color: Color(0xFF2F80ED),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _FinanceTabs extends StatelessWidget {
   const _FinanceTabs({
     required this.selectedIndex,
@@ -468,7 +527,7 @@ class _FinanceTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const labels = ['Кредит', 'Лизинг', 'Рассрочка'];
+    const labels = ['Автофинансирование', 'Мурабаха'];
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
@@ -494,9 +553,10 @@ class _FinanceTabs extends StatelessWidget {
                 child: Text(
                   labels[index],
                   style: TextStyle(
-                    color: selected ? const Color(0xFF2F80ED) : Colors.white70,
-                    fontWeight: FontWeight.w800,
-                  ),
+                      color:
+                          selected ? const Color(0xFF2F80ED) : Colors.white70,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12),
                 ),
               ),
             ),
@@ -527,39 +587,62 @@ class _FinanceInfoCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Финансирование автомобиля',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w900,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _BakAiLogo(),
+              SizedBox(height: 4.h),
+              SizedBox(
+                width: 90.w,
+                child: const Text(
+                  'Ваш инновационный мобильный банк',
+                  style: TextStyle(fontSize: 10, color: Color(0xFF2F80ED)),
+                ),
+              ),
+            ],
           ),
-          SizedBox(height: 12.h),
-          for (final item in items)
-            Padding(
-              padding: EdgeInsets.only(bottom: 7.h),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.check, color: Color(0xFF2EB872), size: 18),
-                  SizedBox(width: 8.w),
-                  Expanded(
-                    child: Text(
-                      item,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                        height: 1.25,
-                      ),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Финансирование автомобиля',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                SizedBox(height: 12.h),
+                for (final item in items)
+                  Padding(
+                    padding: EdgeInsets.only(bottom: 7.h),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.check,
+                            color: Color(0xFF2EB872), size: 18),
+                        SizedBox(width: 8.w),
+                        Expanded(
+                          child: Text(
+                            item,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                              height: 1.25,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+              ],
             ),
+          ),
         ],
       ),
     );
@@ -759,32 +842,6 @@ class _InfoRow extends StatelessWidget {
 }
 
 /// DEMO MODE
-class _RatingAndArticleRow extends StatelessWidget {
-  const _RatingAndArticleRow({required this.listing});
-
-  final SedanMockListing listing;
-
-  @override
-  Widget build(BuildContext context) {
-    final articleNumber = 100000 + sedanMockListings.indexOf(listing);
-
-    return Row(
-      children: [
-        const Stars(rating: 5),
-        SizedBox(width: 10.w),
-        const Text(
-          '3 отзыва',
-          style: TextStyle(fontSize: 12, color: Colors.white54),
-        ),
-        SizedBox(width: 16.w),
-        Text(
-          'Арт: $articleNumber',
-          style: const TextStyle(fontSize: 12, color: Colors.white54),
-        ),
-      ],
-    );
-  }
-}
 
 class _SimilarListingsSection extends StatelessWidget {
   const _SimilarListingsSection({required this.currentListing});

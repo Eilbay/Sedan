@@ -156,7 +156,7 @@ class _BrandLogo extends StatelessWidget {
     final isDarkMode = context.select((ThemeNotifier n) => n.isDarkMode);
 
     return Image.asset(
-      isDarkMode ? 'assets/logo_light.png' : 'assets/logo_bazarlar.png',
+      'assets/sedan.png',
       width: 42.w,
       height: 42.w,
       fit: BoxFit.contain,

@@ -358,7 +358,7 @@ class _ProfileHeaderState extends State<ProfileHeader> {
                 runSpacing: 8,
                 children: [
                   ...marketBadges,
-                  if (verified) _checkPill('Проверен', isDark: isDark),
+                  //if (verified) _checkPill('Проверен', isDark: isDark),
                 ],
               ),
               SizedBox(height: 10.h),
@@ -568,7 +568,7 @@ class _ProfileHeaderState extends State<ProfileHeader> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _statItem(widget.postCounts.toString(), 'Товаров'),
+          _statItem(widget.postCounts.toString(), 'Объявлений'),
           _statDivider(isDark),
           _statItem(widget.currentUser.rating.toInt().toString(), 'Рейтинг'),
           _statDivider(isDark),

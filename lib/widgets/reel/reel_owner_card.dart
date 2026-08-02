@@ -1,10 +1,10 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:optombai/app/router/app_router.dart';
 import 'package:optombai/data/models/reel/reel_model.dart';
 import 'package:optombai/data/models/region/kg_region.dart';
+import 'package:optombai/widgets/utils/smart_asset_image.dart';
 
 class ReelOwnerCard extends StatelessWidget {
   final ReelOwner owner;
@@ -21,6 +21,19 @@ class ReelOwnerCard extends StatelessWidget {
     this.isPromoted = false,
     this.productName = '',
   });
+
+  String? get _priceFromDescription {
+    for (final line in productName.split('\n')) {
+      final trimmed = line.trim();
+      if (trimmed.toLowerCase().startsWith('цена')) {
+        final colonIndex = trimmed.indexOf(':');
+        return colonIndex == -1
+            ? trimmed
+            : trimmed.substring(colonIndex + 1).trim();
+      }
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +65,7 @@ class ReelOwnerCard extends StatelessWidget {
                   ),
                   image: owner.image != null
                       ? DecorationImage(
-                          image: CachedNetworkImageProvider(owner.image!),
+                          image: SmartImage.provider(owner.image!),
                           fit: BoxFit.cover,
                         )
                       : null,
@@ -142,27 +155,27 @@ class ReelOwnerCard extends StatelessWidget {
               ],
             ),
           if (supplier != null) SizedBox(height: 6.h),
-          if (owner.isVerified)
+          if (_priceFromDescription != null)
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  Icons.check_circle,
-                  color: Colors.green,
+                  Icons.sell,
+                  color: Colors.white,
                   size: 12.sp,
                 ),
                 SizedBox(width: 4.w),
                 Text(
-                  'Проверено',
+                  _priceFromDescription!,
                   style: TextStyle(
-                    fontSize: 10.sp,
-                    color: Colors.white.withValues(alpha: 0.9),
-                    fontWeight: FontWeight.w500,
+                    fontSize: 11.sp,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
             ),
-          if (owner.isVerified) SizedBox(height: 6.h),
+          if (_priceFromDescription != null) SizedBox(height: 6.h),
           // Row(
           //   mainAxisSize: MainAxisSize.min,
           //   children: [

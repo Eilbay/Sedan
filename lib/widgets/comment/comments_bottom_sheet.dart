@@ -4,6 +4,7 @@ import 'package:optombai/bloc/comment_bloc/comment_cubit.dart';
 import 'package:optombai/bloc/comment_bloc/comment_state.dart';
 import 'package:optombai/bloc/user_bloc/user_bloc.dart';
 import 'package:optombai/core/theme_notifier.dart';
+import 'package:optombai/data/mock/sedan_mock_reels.dart';
 import 'package:optombai/data/models/comment/comment_owner.dart';
 import 'package:optombai/widgets/comment/comment_card.dart';
 import 'package:optombai/widgets/shimmer/shimmer_list_tile.dart';
@@ -26,10 +27,15 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
+  // DEMO MODE
+  bool get _isMockPost => isSedanMockReelId(widget.postId);
+
   @override
   void initState() {
     super.initState();
-    context.read<CommentCubit>().loadComments(widget.postId);
+    if (!_isMockPost) {
+      context.read<CommentCubit>().loadComments(widget.postId);
+    }
 
     _scrollController.addListener(_onScroll);
   }
@@ -73,80 +79,88 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
           _CommentsHeader(isDarkMode: isDarkMode, textColor: textColor),
           Divider(height: 1, color: dividerColor),
           Expanded(
-            child: BlocConsumer<CommentCubit, CommentState>(
-              listener: (context, state) {
-                final visibleCount = state.totalCount < state.comments.length
-                    ? state.comments.length
-                    : state.totalCount;
-                widget.onCommentCountChanged?.call(visibleCount);
+            child: _isMockPost
+                ? _CommentsEmptyState(
+                    isDarkMode: isDarkMode, textColor: textColor)
+                : BlocConsumer<CommentCubit, CommentState>(
+                    listener: (context, state) {
+                      final visibleCount =
+                          state.totalCount < state.comments.length
+                              ? state.comments.length
+                              : state.totalCount;
+                      widget.onCommentCountChanged?.call(visibleCount);
 
-                if (state.error != null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(state.error!),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                  context.read<CommentCubit>().clearError();
-                }
-
-                if (!state.isSubmitting) {
-                  _scrollToNewestComment();
-                }
-              },
-              builder: (context, state) {
-                if (state.isLoading && state.comments.isEmpty) {
-                  return Column(
-                    children: List.generate(
-                      4,
-                      (_) => const ShimmerListTile(),
-                    ),
-                  );
-                }
-
-                if (state.comments.isEmpty) {
-                  return _CommentsEmptyState(
-                      isDarkMode: isDarkMode, textColor: textColor);
-                }
-
-                return ListView.builder(
-                  controller: _scrollController,
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: const EdgeInsets.only(bottom: 16),
-                  itemCount:
-                      state.comments.length + (state.isLoadingMore ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (index == state.comments.length) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        child: Center(
-                          child: SizedBox(
-                            width: 30,
-                            height: 30,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                isDarkMode ? Colors.white : Colors.grey[600]!,
-                              ),
-                            ),
+                      if (state.error != null && state.comments.isNotEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(state.error!),
+                            backgroundColor: Colors.red,
                           ),
-                        ),
-                      );
-                    }
+                        );
+                        context.read<CommentCubit>().clearError();
+                      } else if (state.error != null) {
+                        context.read<CommentCubit>().clearError();
+                      }
 
-                    final comment = state.comments[index];
-                    return CommentCard(
-                      comment: comment,
-                      isDarkMode: isDarkMode,
-                      onDelete: comment.id > 0
-                          ? () => _showDeleteDialog(comment.id)
-                          : null,
-                    );
-                  },
-                );
-              },
-            ),
+                      if (!state.isSubmitting) {
+                        _scrollToNewestComment();
+                      }
+                    },
+                    builder: (context, state) {
+                      if (state.isLoading && state.comments.isEmpty) {
+                        return Column(
+                          children: List.generate(
+                            4,
+                            (_) => const ShimmerListTile(),
+                          ),
+                        );
+                      }
+
+                      if (state.comments.isEmpty) {
+                        return _CommentsEmptyState(
+                            isDarkMode: isDarkMode, textColor: textColor);
+                      }
+
+                      return ListView.builder(
+                        controller: _scrollController,
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
+                        padding: const EdgeInsets.only(bottom: 16),
+                        itemCount: state.comments.length +
+                            (state.isLoadingMore ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index == state.comments.length) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              child: Center(
+                                child: SizedBox(
+                                  width: 30,
+                                  height: 30,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      isDarkMode
+                                          ? Colors.white
+                                          : Colors.grey[600]!,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+
+                          final comment = state.comments[index];
+                          return CommentCard(
+                            comment: comment,
+                            isDarkMode: isDarkMode,
+                            onDelete: comment.id > 0
+                                ? () => _showDeleteDialog(comment.id)
+                                : null,
+                          );
+                        },
+                      );
+                    },
+                  ),
           ),
           Divider(height: 1, color: dividerColor),
           AnimatedPadding(

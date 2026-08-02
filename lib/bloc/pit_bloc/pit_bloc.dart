@@ -24,12 +24,30 @@ class PitBloc extends Bloc<PitEvent, PitState> {
 
   String _getToken() => preferences.getString(TOKEN_KEY) ?? '';
 
-  // DEMO MODE: the wallet balance is a purely local mock
-  void _onLoadPit(
+  Future<void> _onLoadPit(
     LoadPitEvent event,
     Emitter<PitState> emit,
-  ) {
-    emit(state.copyWith(isLoading: false, isSuccess: true, errors: []));
+  ) async {
+    final token = _getToken();
+    if (token.isEmpty) return;
+
+    emit(state.copyWith(isLoading: true, errors: []));
+
+    try {
+      final wallet = await _repository.getMyPit(token);
+      emit(state.copyWith(
+        isLoading: false,
+        isSuccess: true,
+        wallet: wallet,
+        balance: wallet.balance,
+      ));
+    } catch (e) {
+      debugPrint('LoadPitEvent error: $e');
+      emit(state.copyWith(
+        isLoading: false,
+        errors: [e.toString()],
+      ));
+    }
   }
 
   Future<void> _onInitPit(

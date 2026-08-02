@@ -463,8 +463,6 @@ class ApiClient {
       },
     ));
 
-    dio.interceptors.add(MockBackendInterceptor());
-
     dio.httpClientAdapter = IOHttpClientAdapter(
       createHttpClient: () {
         final c = HttpClient();
@@ -528,73 +526,5 @@ class ApiClient {
   /// Clear all cached responses
   Future<void> clearCache() async {
     await _cacheOptions.store?.clean();
-  }
-}
-
-class MockBackendInterceptor extends Interceptor {
-  @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    handler.resolve(Response(
-      requestOptions: options,
-      statusCode: 200,
-      data: _mockDataFor(options),
-    ));
-  }
-
-  Object _mockDataFor(RequestOptions options) {
-    final path = options.path.toLowerCase();
-
-    if (path.contains('token')) {
-      return {
-        'access': 'mock-access-token',
-        'refresh': 'mock-refresh-token',
-      };
-    }
-    if (path.contains('categories')) {
-      return const [];
-    }
-    if (path.contains('users') && !path.contains('get_user_by_token')) {
-      return {
-        'id': 'mock-user',
-        'username': 'Sedan User',
-        'email': 'mock@sedan.kg',
-        'is_active': true,
-        'is_verified': true,
-        'user_status': {
-          'id': 1,
-          'user': 'mock-user',
-          'is_agree': true,
-          'is_active': true,
-          'is_premium': false,
-        },
-      };
-    }
-    if (path.contains('banners') ||
-        path.contains('countries') ||
-        path.contains('currencies') ||
-        path.contains('question') ||
-        path.contains('posts') ||
-        path.contains('reels') ||
-        path.contains('chats') ||
-        path.contains('notifications') ||
-        path.contains('favorites') ||
-        path.contains('reviews') ||
-        path.contains('comments') ||
-        path.contains('reports') ||
-        path.contains('blocks')) {
-      return const {
-        'count': 0,
-        'next': null,
-        'previous': null,
-        'results': [],
-      };
-    }
-
-    return const {
-      'count': 0,
-      'next': null,
-      'previous': null,
-      'results': [],
-    };
   }
 }

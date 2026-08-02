@@ -25,6 +25,8 @@ import 'package:optombai/data/repositories/i_admin_request_repository.dart';
 import 'package:optombai/data/repositories/i_block_repository.dart';
 import 'package:optombai/data/repositories/i_report_repository.dart';
 
+import 'package:optombai/data/repositories/user_repository.dart';
+import 'package:optombai/data/repositories/auth_request.dart';
 import 'package:optombai/data/repositories/chat_repository.dart';
 import 'package:optombai/data/repositories/comment_repository.dart';
 import 'package:optombai/data/repositories/favorite_repository.dart';
@@ -85,10 +87,10 @@ void configureDependencies(SharedPreferences preferences) {
     () => MockProductRepository(),
   );
   getIt.registerLazySingleton<IUserRepository>(
-    () => MockUserRepository(),
+    () => UserRepository(),
   );
   getIt.registerLazySingleton<IAuthRepository>(
-    () => MockAuthRepository(),
+    () => AuthRepository(),
   );
   getIt.registerLazySingleton<ICategoryRepository>(
     () => MockCategoryRepository(),

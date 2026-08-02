@@ -287,90 +287,6 @@ class MarketProductCard extends StatelessWidget {
                         ],
                       ],
                     ),
-                    const Spacer(),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => _openOwner(context),
-                            behavior: HitTestBehavior.opaque,
-                            child: Row(
-                              children: [
-                                _OwnerAvatar(
-                                  image: results.owner?.image,
-                                  isDark: isDark,
-                                ),
-                                SizedBox(width: 5.w),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Flexible(
-                                            child: TextTranslated(
-                                              results.owner?.username ?? '',
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w600,
-                                                color: fg,
-                                              ),
-                                            ),
-                                          ),
-                                          if (results.owner?.is_verified ==
-                                              true) ...[
-                                            SizedBox(width: 2.w),
-                                            const Icon(
-                                              Icons.verified,
-                                              color: Colors.green,
-                                              size: 11,
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                      if (regionLabel != null)
-                                        TextTranslated(
-                                          regionLabel,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            color: sub,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 4.w),
-                        const Icon(
-                          Icons.star,
-                          size: 13,
-                          color: Color(0xFFFFC107),
-                        ),
-                        SizedBox(width: 2.w),
-                        Text(
-                          ownerRating.toStringAsFixed(1),
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: fg,
-                          ),
-                        ),
-                        SizedBox(width: 2.w),
-                        Text(
-                          '($ownerReviews)',
-                          style: TextStyle(fontSize: 10, color: sub),
-                        ),
-                      ],
-                    ),
                   ],
                 ),
               ),
@@ -440,7 +356,7 @@ class VipBadgeNew extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Image.asset('assets/icons/vip_badge.png', height: 22);
+    return Image.asset('assets/icons/vip_badge.png', height: 18);
   }
 }
 

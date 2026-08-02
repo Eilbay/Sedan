@@ -33,16 +33,6 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   static const _green = Color(0xFF2EB872);
   static const _darkCard = Color(0xFF14181F);
-  static const _mockProfileDescription =
-      'Автосалон «Aibek.Auto» — большой выбор автомобилей на любой вкус и бюджет!';
-  static const _mockProfileAboutUs = '''
-🚘 Автосалон «Aibek.Auto» — большой выбор автомобилей на любой вкус и бюджет!
-
-💰 Выгодные цены
-🔄 Обмен (Trade-in)
-💳 Кредит и рассрочка
-📄 Полное оформление документов
-''';
 
   int currentIndex = 0;
   final ScrollController _controller = ScrollController();
@@ -144,9 +134,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     BottomNav.of(context)?.setTab(0);
   }
 
+  // DEMO MODE
+  late List<SedanMockListing> _myListings;
+
   @override
   void initState() {
     super.initState();
+    _myListings = sedanMockListings.take(2).toList();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<PitBloc>().add(const LoadPitEvent());
+    });
   }
 
   @override
@@ -156,22 +154,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       timer.cancel();
     }
     super.dispose();
-  }
-
-  User _mockProfileUser() {
-    return User(
-      id: 'mock-aibek-auto',
-      username: 'Aibek.Auto',
-      description: _mockProfileDescription,
-      about_us: _mockProfileAboutUs.trim(),
-      userType: 'auto_salon',
-      image: 'assets/sedan.png',
-      postsCount: 2,
-      rating: 5,
-      reviewsCount: 3,
-      is_active: true,
-      is_verified: true,
-    );
   }
 
   Widget _topBar(BuildContext context, bool isDark, bool isCurrentUser,
@@ -404,7 +386,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final bool isRegister = context.select((ThemeNotifier n) => n.isRegister);
     var bloc = context.select((UserBloc b) => b.state);
     const bool isCurrentUser = true;
-    User currentUser = _mockProfileUser();
+    User currentUser = bloc.user;
     final id = bloc.user.id;
     debugPrint(
       '[PROFILE] build isRegister=$isRegister isCurrentUser=$isCurrentUser '
@@ -439,7 +421,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         SizedBox(height: 8.h),
                         ProfileHeader(
-                          postCounts: currentUser.postsCount,
+                          postCounts: _myListings.length,
                           isCurrentUser: isCurrentUser,
                           currentUser: currentUser,
                           showInlineMenu: false,
@@ -506,23 +488,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _tabContent(BuildContext context) {
     if (currentIndex == 0) {
-      final listings = sedanMockListings.take(2).toList();
       final isDark = context.select((ThemeNotifier n) => n.isDarkMode);
       return Padding(
         padding: EdgeInsets.only(top: 14.h),
         child: GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: listings.length,
+          itemCount: _myListings.length,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
             mainAxisSpacing: 12.h,
             crossAxisSpacing: 12.w,
-            mainAxisExtent: 340.h,
+            childAspectRatio: 0.72,
           ),
           itemBuilder: (context, index) => _mockProductCard(
             context,
-            listings[index],
+            _myListings[index],
             isDarkMode: isDark,
             isCompact: true,
           ),
@@ -530,7 +511,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     } else if (currentIndex == 1) {
       const bool isCurrentUser = true;
-      final currentUser = _mockProfileUser();
+      final currentUser = context.read<UserBloc>().state.user;
       return Container(
         padding: const EdgeInsets.symmetric(vertical: 15),
         child: Column(
@@ -596,12 +577,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final isModerating = _moderatingListings.contains(listing.title);
       const purple = Color(0xFF7B2FF2);
 
-      void openDetails() {
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
+      Future<void> openDetails() async {
+        final result = await Navigator.of(context).push<_MockListingEditResult>(
+          MaterialPageRoute<_MockListingEditResult>(
             builder: (_) => _MockListingDetailsPage(listing: listing),
           ),
         );
+        if (result == null || !mounted) return;
+
+        setState(() {
+          final index = _myListings.indexOf(listing);
+          if (index == -1) return;
+          if (result.deleted) {
+            _myListings.removeAt(index);
+          } else if (result.listing != null) {
+            _myListings[index] = result.listing!;
+          }
+        });
       }
 
       return Material(
@@ -617,7 +609,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
-                flex: 5,
                 child: GestureDetector(
                   onTap: openDetails,
                   child: Stack(
@@ -721,61 +712,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               ],
-              Expanded(
-                flex: 5,
-                child: InkWell(
-                  onTap: openDetails,
-                  child: Padding(
-                    padding: EdgeInsets.all(10.w),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          listing.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            height: 1.15,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        SizedBox(height: 8.h),
-                        Text(
-                          [year, engine]
-                              .where((value) => value.isNotEmpty)
-                              .join(' · '),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: subColor, fontSize: 12),
-                        ),
-                        SizedBox(height: 8.h),
-                        Text(
-                          listing.condition,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: subColor,
-                            fontSize: 12,
-                            height: 1.25,
-                          ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          listing.price,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Color(0xFF2F80ED),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
             ],
           ),
         ),
@@ -1035,6 +971,121 @@ class _PromotedBadge extends StatelessWidget {
   }
 }
 
+/// DEMO MODE
+class _MockListingEditResult {
+  const _MockListingEditResult.updated(this.listing) : deleted = false;
+
+  const _MockListingEditResult.deleted()
+      : listing = null,
+        deleted = true;
+
+  final SedanMockListing? listing;
+  final bool deleted;
+}
+
+class _MockEditListingDialog extends StatefulWidget {
+  const _MockEditListingDialog({required this.listing});
+
+  final SedanMockListing listing;
+
+  static Future<SedanMockListing?> show(
+    BuildContext context, {
+    required SedanMockListing listing,
+  }) {
+    return showDialog<SedanMockListing?>(
+      context: context,
+      builder: (_) => _MockEditListingDialog(listing: listing),
+    );
+  }
+
+  @override
+  State<_MockEditListingDialog> createState() => _MockEditListingDialogState();
+}
+
+class _MockEditListingDialogState extends State<_MockEditListingDialog> {
+  late final _titleController =
+      TextEditingController(text: widget.listing.title);
+  late final _priceController =
+      TextEditingController(text: widget.listing.price);
+  late final _conditionController =
+      TextEditingController(text: widget.listing.condition);
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _priceController.dispose();
+    _conditionController.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final title = _titleController.text.trim();
+    final price = _priceController.text.trim();
+    final condition = _conditionController.text.trim();
+    if (title.isEmpty || price.isEmpty) return;
+
+    Navigator.pop(
+      context,
+      SedanMockListing(
+        categoryKey: widget.listing.categoryKey,
+        title: title,
+        imageAsset: widget.listing.imageAsset,
+        price: price,
+        specs: widget.listing.specs,
+        condition: condition,
+        isVip: widget.listing.isVip,
+        views: widget.listing.views,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: const Color(0xff192536),
+      title: const Text(
+        'Редактировать объявление',
+        style: TextStyle(color: Colors.white),
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _titleController,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(labelText: 'Название'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _priceController,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(labelText: 'Цена'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _conditionController,
+              style: const TextStyle(color: Colors.white),
+              maxLines: 3,
+              decoration: const InputDecoration(labelText: 'Описание'),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Отмена'),
+        ),
+        TextButton(
+          onPressed: _save,
+          child: const Text('Сохранить'),
+        ),
+      ],
+    );
+  }
+}
+
 class _MockListingDetailsPage extends StatefulWidget {
   const _MockListingDetailsPage({required this.listing});
 
@@ -1056,12 +1107,58 @@ class _MockListingDetailsPageState extends State<_MockListingDetailsPage> {
   bool _moderating = false;
   Timer? _moderationTimer;
 
+  // DEMO MODE
+  late SedanMockListing _listing = widget.listing;
+  bool _edited = false;
+
+  void _handleBack() {
+    if (_edited) {
+      Navigator.of(context).maybePop(_MockListingEditResult.updated(_listing));
+    } else {
+      Navigator.of(context).maybePop();
+    }
+  }
+
+  Future<void> _handleEdit() async {
+    final edited =
+        await _MockEditListingDialog.show(context, listing: _listing);
+    if (edited == null || !mounted) return;
+    setState(() {
+      _listing = edited;
+      _edited = true;
+    });
+  }
+
+  void _handleDelete() {
+    showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Удалить объявление?'),
+        content: const Text('Это действие нельзя отменить.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Удалить'),
+          ),
+        ],
+      ),
+    ).then((confirmed) {
+      if (confirmed != true || !mounted) return;
+      Navigator.of(context).maybePop(const _MockListingEditResult.deleted());
+    });
+  }
+
   Future<void> _handlePromote() async {
     if (_promoEndAt != null || _moderating) return;
 
     final package = await _MockPromotionDialog.show(
       context,
-      productName: widget.listing.title,
+      productName: _listing.title,
     );
     if (package == null || !mounted) return;
 
@@ -1133,17 +1230,17 @@ class _MockListingDetailsPageState extends State<_MockListingDetailsPage> {
     });
   }
 
-  String get _usdPrice => widget.listing.price;
+  String get _usdPrice => _listing.price;
 
   String get _somPrice {
-    final raw = widget.listing.price.replaceAll(RegExp(r'[^0-9]'), '').trim();
+    final raw = _listing.price.replaceAll(RegExp(r'[^0-9]'), '').trim();
     final usd = int.tryParse(raw) ?? 0;
-    if (usd == 0) return widget.listing.price;
+    if (usd == 0) return _listing.price;
     return '${_formatNumber(usd * 89)} сом';
   }
 
   int get _monthlyPayment {
-    final raw = widget.listing.price.replaceAll(RegExp(r'[^0-9]'), '').trim();
+    final raw = _listing.price.replaceAll(RegExp(r'[^0-9]'), '').trim();
     final usd = int.tryParse(raw) ?? 0;
     if (usd == 0) return 0;
     return (usd / _termMonths).round();
@@ -1162,7 +1259,7 @@ class _MockListingDetailsPageState extends State<_MockListingDetailsPage> {
   @override
   Widget build(BuildContext context) {
     const bg = Colors.black;
-    final listing = widget.listing;
+    final listing = _listing;
     final categoryTitle = sedanMockCategoryTitleForKey(listing.categoryKey);
 
     return Scaffold(
@@ -1181,11 +1278,13 @@ class _MockListingDetailsPageState extends State<_MockListingDetailsPage> {
                   isSaved: _isSaved,
                   isPromoted: _promoEndAt != null,
                   isModerating: _moderating,
-                  onBack: () => Navigator.of(context).maybePop(),
+                  onBack: _handleBack,
                   onSavedTap: () => setState(() => _isSaved = !_isSaved),
                   onMenuAction: (action) {
                     if (action == 'promote') _handlePromote();
                     if (action == 'stop') _confirmStopPromotion();
+                    if (action == 'edit') _handleEdit();
+                    if (action == 'delete') _handleDelete();
                   },
                 ),
               ),
@@ -1345,7 +1444,9 @@ class _MockDetailsTopBar extends StatelessWidget {
             ),
           ),
           IconButton(
-            onPressed: () {},
+            onPressed: () => SharePlus.instance.share(
+              ShareParams(text: '$title\nСмотри на Sedan.kg'),
+            ),
             icon: const Icon(Icons.share, color: Colors.white),
           ),
           PopupMenuButton<String>(
@@ -1395,6 +1496,29 @@ class _MockDetailsTopBar extends StatelessWidget {
                     ],
                   ),
                 ),
+              const PopupMenuDivider(),
+              const PopupMenuItem<String>(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit, color: Color(0xff4CAF50)),
+                    SizedBox(width: 8),
+                    Text('Редактировать',
+                        style: TextStyle(color: Colors.white)),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem<String>(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete, color: Color(0xffe10a49)),
+                    SizedBox(width: 8),
+                    Text('Удалить', style: TextStyle(color: Colors.white)),
+                  ],
+                ),
+              ),
             ],
           ),
         ],

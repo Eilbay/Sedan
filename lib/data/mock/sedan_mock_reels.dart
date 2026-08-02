@@ -3,8 +3,9 @@ import 'package:optombai/data/models/reel/reel_model.dart';
 const _videoPath = 'assets/sedan/videos';
 
 final _owner = ReelOwner(
-  id: 'sedan_mock_owner',
-  username: 'sedan.kg',
+  id: 'mock-aibek-auto',
+  username: 'Aibek.Auto',
+  image: 'assets/sedan.png',
   accountVerified: true,
   isVerified: true,
   userStatus: const ReelUserStatus(isPremium: false),

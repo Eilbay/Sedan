@@ -150,25 +150,37 @@ class _ChatListScreenState extends State<ChatListScreen>
           const BottomNav(currentIndexOverride: -10, passive: true),
       appBar: AppBar(
         title: const Text("Сообщения"),
+        toolbarHeight: 68,
         actions: [
           GestureDetector(
             onTap: _onSupportButtonPressed,
             child: Padding(
               padding: const EdgeInsets.only(right: 12),
-              child: Container(
-                padding: EdgeInsets.all(2.w),
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [Colors.red, Colors.purple],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(2.w),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [Colors.red, Colors.purple],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: const CircleAvatar(
+                      radius: 18,
+                      backgroundImage:
+                          AssetImage('assets/icons/support_agent.jpg'),
+                    ),
                   ),
-                ),
-                child: const CircleAvatar(
-                  radius: 18,
-                  backgroundImage: AssetImage('assets/icons/support_agent.jpg'),
-                ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    'Admin',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+                  ),
+                ],
               ),
             ),
           ),
