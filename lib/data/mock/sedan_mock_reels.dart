@@ -5,7 +5,7 @@ const _videoPath = 'assets/sedan/videos';
 final _owner = ReelOwner(
   id: 'mock-aibek-auto',
   username: 'Aibek.Auto',
-  image: 'assets/sedan.png',
+  image: 'assets/mock/mock_aibek.png',
   accountVerified: true,
   isVerified: true,
   userStatus: const ReelUserStatus(isPremium: false),
@@ -34,7 +34,7 @@ final sedanMockReels = <ReelModel>[
 Год: 2019
 Об: 2.2 дизель
 Пробег: 156км
-Цена: 20.800\$ торг''',
+Цена: 20.800 \$ торг''',
     views: 0,
     videoUrl: '$_videoPath/IMG_2850.MP4',
     owner: _owner,
@@ -51,7 +51,7 @@ final sedanMockReels = <ReelModel>[
 Год: 2020
 Об: 1.0 бенз
 Пробег: 167км
-Цена: 7800\$ мини торг''',
+Цена: 7800 \$ мини торг''',
     views: 0,
     videoUrl: '$_videoPath/IMG_2853.MP4',
     owner: _owner,
@@ -66,7 +66,7 @@ final sedanMockReels = <ReelModel>[
 Хендай Соната
 Год: 2019
 Объем: 2.0 газ
-Цена: 10200
+Цена: 10200 \$
 Тел: 0771 00 04 04''',
     views: 0,
     videoUrl: '$_videoPath/IMG_2855.MP4',
@@ -112,7 +112,7 @@ final sedanMockReels = <ReelModel>[
 Марка: Hyundai Grandeur
 Год: 2020
 Объем: 2.5 бензин
-Цена: 13 300''',
+Цена: 13 300\$''',
     views: 0,
     videoUrl: '$_videoPath/IMG_2863.MP4',
     owner: _owner,

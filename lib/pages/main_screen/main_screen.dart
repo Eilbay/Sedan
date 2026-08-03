@@ -1370,16 +1370,32 @@ class _SedanMockListingsSliver extends StatelessWidget {
 class _MockPromoBanner extends StatelessWidget {
   const _MockPromoBanner();
 
+  static const _url = 'https://www.instagram.com/pioner.kg?igsh=eXAyeXZ0aWRvNzdm';
+
+  Future<void> _onTap(BuildContext context) async {
+    try {
+      await launchUrl(Uri.parse(_url), mode: LaunchMode.externalApplication);
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Не удалось открыть ссылку')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: AspectRatio(
-        aspectRatio: 327 / 140,
-        child: Image.asset(
-          'assets/banners/mock_banner.png',
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+    return GestureDetector(
+      onTap: () => _onTap(context),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: AspectRatio(
+          aspectRatio: 327 / 140,
+          child: Image.asset(
+            'assets/banners/mock_banner.png',
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+          ),
         ),
       ),
     );

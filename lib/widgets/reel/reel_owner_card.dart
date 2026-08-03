@@ -135,22 +135,20 @@ class ReelOwnerCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  Icons.check_circle,
-                  color: Colors.green,
+                  Icons.location_on_outlined,
+                  color: Colors.white.withValues(alpha: 0.9),
                   size: 12.sp,
                 ),
                 SizedBox(width: 4.w),
-                Flexible(
-                  child: Text(
-                    supplier.market.name,
-                    style: TextStyle(
-                      fontSize: 10.sp,
-                      color: Colors.white.withValues(alpha: 0.9),
-                      fontWeight: FontWeight.w500,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                Text(
+                  'Бишкек',
+                  style: TextStyle(
+                    fontSize: 10.sp,
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontWeight: FontWeight.w500,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

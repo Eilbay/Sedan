@@ -1,12 +1,15 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:optombai/app/router/app_router.dart';
+import 'package:optombai/core/theme_notifier.dart';
 import 'package:optombai/data/models/report/report_target_type.dart';
 import 'package:optombai/data/mock/sedan_mock_listings.dart';
 import 'package:optombai/widgets/bottom_nav.dart';
 import 'package:optombai/widgets/moderation/user_actions_sheet.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SedanMockDetailsPage extends StatefulWidget {
   const SedanMockDetailsPage({super.key, required this.listing});
@@ -51,9 +54,10 @@ class _SedanMockDetailsPageState extends State<SedanMockDetailsPage> {
   @override
   Widget build(BuildContext context) {
     final listing = widget.listing;
+    final isDark = context.select((ThemeNotifier n) => n.isDarkMode);
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: isDark ? Colors.black : Colors.white,
       body: SafeArea(
         bottom: false,
         child: CustomScrollView(
@@ -72,64 +76,60 @@ class _SedanMockDetailsPageState extends State<SedanMockDetailsPage> {
             SliverPadding(
               padding: EdgeInsets.fromLTRB(15.w, 18.h, 15.w, 0),
               sliver: SliverList(
-                delegate: SliverChildListDelegate(
-                  [
-                    _HeroImage(listing: listing),
-                    SizedBox(height: 14.h),
-                    _SellerPriceCard(
-                      listing: listing,
-                      somPrice: _somPrice,
-                      usdPrice: _usdPrice,
-                    ),
-                    SizedBox(height: 10.h),
-                    _StatsRow(listing: listing),
-                    SizedBox(height: 24.h),
-                    const _SectionTitle('О товаре'),
-                    SizedBox(height: 16.h),
-                    _InfoRow(label: 'Название', value: listing.title),
-                    _InfoRow(label: 'Описание', value: listing.condition),
-                    const _InfoRow(label: 'Регион', value: 'Бишкек'),
-                    SizedBox(height: 24.h),
-                    const _SectionTitle('Кредит и финансирование'),
-                    SizedBox(height: 12.h),
-                    _FinanceTabs(
-                      selectedIndex: _financeIndex,
-                      onChanged: (index) => setState(() {
-                        _financeIndex = index;
-                      }),
-                    ),
-                    SizedBox(height: 12.h),
-                    const _FinanceInfoCard(),
-                    SizedBox(height: 14.h),
-                    _FinanceCalculator(
-                      price: _usdPrice,
-                      termMonths: _termMonths,
-                      monthlyPayment: _monthlyPayment,
-                      onTermChanged: (value) => setState(() {
-                        _termMonths = value;
-                      }),
-                    ),
-                    SizedBox(height: 28.h),
-                    _SimilarListingsSection(currentListing: listing),
-                    SizedBox(height: 28.h),
-                    const Center(
-                      child: Text(
-                        'Авторизуйтесь чтобы оставить отзыв!',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
+                delegate: SliverChildListDelegate([
+                  _HeroImage(listing: listing),
+                  SizedBox(height: 14.h),
+                  _SellerPriceCard(
+                    listing: listing,
+                    somPrice: _somPrice,
+                    usdPrice: _usdPrice,
+                  ),
+                  SizedBox(height: 10.h),
+                  _StatsRow(listing: listing),
+                  SizedBox(height: 12.h),
+                  _InfoRow(label: 'Название', value: listing.title),
+                  _InfoRow(label: 'Описание', value: listing.condition),
+                  const _InfoRow(label: 'Регион', value: 'Бишкек'),
+                  SizedBox(height: 24.h),
+                  const _SectionTitle('Кредит и финансирование'),
+                  SizedBox(height: 12.h),
+                  _FinanceTabs(
+                    selectedIndex: _financeIndex,
+                    onChanged: (index) => setState(() {
+                      _financeIndex = index;
+                    }),
+                  ),
+                  SizedBox(height: 12.h),
+                  const _FinanceInfoCard(),
+                  SizedBox(height: 14.h),
+                  _FinanceCalculator(
+                    price: _usdPrice,
+                    termMonths: _termMonths,
+                    monthlyPayment: _monthlyPayment,
+                    onTermChanged: (value) => setState(() {
+                      _termMonths = value;
+                    }),
+                  ),
+                  SizedBox(height: 28.h),
+                  _SimilarListingsSection(currentListing: listing),
+                  SizedBox(height: 28.h),
+                  Center(
+                    child: Text(
+                      'Авторизуйтесь чтобы оставить отзыв!',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    SizedBox(
-                      height: kBottomNavigationBarHeight +
-                          MediaQuery.viewPaddingOf(context).bottom +
-                          28.h,
-                    ),
-                  ],
-                ),
+                  ),
+                  SizedBox(
+                    height: kBottomNavigationBarHeight +
+                        MediaQuery.viewPaddingOf(context).bottom +
+                        28.h,
+                  ),
+                ]),
               ),
             ),
           ],
@@ -139,7 +139,10 @@ class _SedanMockDetailsPageState extends State<SedanMockDetailsPage> {
         mainAxisSize: MainAxisSize.min,
         children: [
           _ContactButtonsRow(listing: listing),
-          const BottomNav(currentIndexOverride: -1, passive: true),
+          const BottomNav(
+            currentIndexOverride: -1,
+            passive: true,
+          ),
         ],
       ),
     );
@@ -184,13 +187,16 @@ class _TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.select((ThemeNotifier n) => n.isDarkMode);
+    final fg = isDark ? Colors.white : Colors.black;
+
     return SizedBox(
       height: 54.h,
       child: Row(
         children: [
           IconButton(
             onPressed: onBack,
-            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+            icon: Icon(Icons.arrow_back_ios_new, color: fg),
           ),
           SizedBox(width: 8.w),
           Expanded(
@@ -198,8 +204,8 @@ class _TopBar extends StatelessWidget {
               listing.title.toUpperCase(),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: fg,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 1,
               ),
@@ -209,16 +215,16 @@ class _TopBar extends StatelessWidget {
             onPressed: onSavedTap,
             icon: Icon(
               isSaved ? Icons.bookmark : Icons.bookmark_border,
-              color: Colors.white,
+              color: fg,
             ),
           ),
           IconButton(
             onPressed: _onShare,
-            icon: const Icon(Icons.share, color: Colors.white),
+            icon: Icon(Icons.share, color: fg),
           ),
           IconButton(
             onPressed: () => _onMore(context),
-            icon: const Icon(Icons.more_vert, color: Colors.white),
+            icon: Icon(Icons.more_vert, color: fg),
           ),
         ],
       ),
@@ -260,34 +266,38 @@ class _SellerPriceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.select((ThemeNotifier n) => n.isDarkMode);
+    final fg = isDark ? Colors.white : Colors.black;
+    final sub = isDark ? Colors.white70 : const Color(0xFF5F5F5F);
+    final cardBg = isDark ? const Color(0xFF14181F) : Colors.white;
+    final cardBorder =
+        (isDark ? Colors.white : Colors.black).withValues(alpha: 0.07);
+
     return InkWell(
       borderRadius: BorderRadius.circular(14),
       onTap: () => context.router.push(
-        OtherUserProfileRoute(
-          user: _mockOwnerId,
-          username: _mockOwnerUsername,
-        ),
+        OtherUserProfileRoute(user: _mockOwnerId, username: _mockOwnerUsername),
       ),
       child: Container(
         padding: EdgeInsets.all(14.w),
         decoration: BoxDecoration(
-          color: const Color(0xFF14181F),
+          color: cardBg,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+          border: Border.all(color: cardBorder),
         ),
         child: Row(
           children: [
             const CircleAvatar(
               radius: 24,
               backgroundColor: Colors.black,
-              backgroundImage: AssetImage('assets/sedan.png'),
+              backgroundImage: AssetImage('assets/mock/mock_aibek.png'),
             ),
             SizedBox(width: 12.w),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
+                  Row(
                     children: [
                       Flexible(
                         child: Text(
@@ -295,24 +305,27 @@ class _SellerPriceCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: Colors.white,
+                            color: fg,
                             fontSize: 17,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
                       ),
-                      SizedBox(width: 6),
-                      Icon(Icons.verified, color: Color(0xFF2F80ED), size: 18),
+                      const SizedBox(width: 6),
+                      const Icon(Icons.verified,
+                          color: Color(0xFF2F80ED), size: 18),
                     ],
                   ),
                   SizedBox(height: 4.h),
-                  const Row(
+                  Row(
                     children: [
-                      Text('Рейтинг: 5.0',
-                          style:
-                              TextStyle(color: Colors.white70, fontSize: 13)),
-                      SizedBox(width: 4),
-                      Icon(Icons.star, color: Color(0xFFFFA800), size: 14),
+                      Text(
+                        'Рейтинг: 5.0',
+                        style: TextStyle(color: sub, fontSize: 13),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.star,
+                          color: Color(0xFFFFA800), size: 14),
                     ],
                   ),
                 ],
@@ -324,8 +337,8 @@ class _SellerPriceCard extends StatelessWidget {
               children: [
                 Text(
                   usdPrice,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: fg,
                     fontWeight: FontWeight.w900,
                     fontSize: 17,
                   ),
@@ -355,6 +368,9 @@ class _StatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.select((ThemeNotifier n) => n.isDarkMode);
+    final dotColor = isDark ? Colors.white38 : Colors.black26;
+    final subColor = isDark ? Colors.white54 : const Color(0xFF7A7A7A);
     final articleNumber = 100000 + sedanMockListings.indexOf(listing);
 
     return Wrap(
@@ -363,14 +379,19 @@ class _StatsRow extends StatelessWidget {
       runSpacing: 4,
       children: [
         _StatsItem(
-            icon: Icons.remove_red_eye_outlined,
-            text: '${listing.views} просмотров'),
-        const Text('•', style: TextStyle(color: Colors.white38, fontSize: 12)),
+          icon: Icons.remove_red_eye_outlined,
+          text: '${listing.views} просмотров',
+        ),
+        Text('•', style: TextStyle(color: dotColor, fontSize: 12)),
         const _StatsItem(
-            icon: Icons.calendar_month_outlined, text: 'Добавлено недавно'),
-        const Text('•', style: TextStyle(color: Colors.white38, fontSize: 12)),
-        Text('Арт: $articleNumber',
-            style: const TextStyle(color: Colors.white54, fontSize: 12)),
+          icon: Icons.calendar_month_outlined,
+          text: 'Добавлено недавно',
+        ),
+        Text('•', style: TextStyle(color: dotColor, fontSize: 12)),
+        Text(
+          'Арт: $articleNumber',
+          style: TextStyle(color: subColor, fontSize: 12),
+        ),
       ],
     );
   }
@@ -384,38 +405,62 @@ class _StatsItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.select((ThemeNotifier n) => n.isDarkMode);
+    final subColor = isDark ? Colors.white54 : const Color(0xFF7A7A7A);
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 15, color: Colors.white54),
+        Icon(icon, size: 15, color: subColor),
         const SizedBox(width: 4),
-        Text(text, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+        Text(text, style: TextStyle(color: subColor, fontSize: 12)),
       ],
     );
   }
 }
+
+// DEMO MODE
+const _mockOwnerPhone = '0551947777';
 
 class _ContactButtonsRow extends StatelessWidget {
   const _ContactButtonsRow({required this.listing});
 
   final SedanMockListing listing;
 
-  void _openOwner(BuildContext context) {
-    context.router.push(
-      OtherUserProfileRoute(
-        user: _mockOwnerId,
-        username: _mockOwnerUsername,
+  Future<void> _call(BuildContext context) async {
+    final uri = Uri(scheme: 'tel', path: _mockOwnerPhone);
+    try {
+      await launchUrl(uri);
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Не удалось позвонить')));
+    }
+  }
+
+  void _openChat(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SedanMockChatScreen(listing: listing),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.select((ThemeNotifier n) => n.isDarkMode);
+
     return Container(
       padding: EdgeInsets.fromLTRB(12.w, 10.h, 12.w, 10.h),
-      decoration: const BoxDecoration(
-        color: Colors.black,
-        border: Border(top: BorderSide(color: Color(0x14FFFFFF))),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.black : Colors.white,
+        border: Border(
+          top: BorderSide(
+            color:
+                (isDark ? Colors.white : Colors.black).withValues(alpha: 0.08),
+          ),
+        ),
       ),
       child: SafeArea(
         top: false,
@@ -424,9 +469,11 @@ class _ContactButtonsRow extends StatelessWidget {
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () => _openOwner(context),
-                icon: const Icon(Icons.chat_bubble_outline,
-                    color: Color(0xFF2F80ED)),
+                onPressed: () => _openChat(context),
+                icon: const Icon(
+                  Icons.chat_bubble_outline,
+                  color: Color(0xFF2F80ED),
+                ),
                 label: const Text('Написать'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFF2F80ED),
@@ -441,7 +488,7 @@ class _ContactButtonsRow extends StatelessWidget {
             SizedBox(width: 10.w),
             Expanded(
               child: ElevatedButton.icon(
-                onPressed: () => _openOwner(context),
+                onPressed: () => _call(context),
                 icon: const Icon(Icons.call, color: Colors.white),
                 label: const Text('Позвонить'),
                 style: ElevatedButton.styleFrom(
@@ -461,6 +508,225 @@ class _ContactButtonsRow extends StatelessWidget {
   }
 }
 
+class _MockChatMessage {
+  const _MockChatMessage({
+    required this.text,
+    required this.isMe,
+    required this.time,
+  });
+
+  final String text;
+  final bool isMe;
+  final DateTime time;
+}
+
+/// DEMO MODE
+class SedanMockChatScreen extends StatefulWidget {
+  const SedanMockChatScreen({super.key, this.listing});
+
+  final SedanMockListing? listing;
+
+  @override
+  State<SedanMockChatScreen> createState() => _SedanMockChatScreenState();
+}
+
+class _SedanMockChatScreenState extends State<SedanMockChatScreen> {
+  final TextEditingController _controller = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  late final List<_MockChatMessage> _messages = [
+    _MockChatMessage(
+      text: widget.listing != null
+          ? 'Здравствуйте! Спрашиваете по "${widget.listing!.title}"? '
+              'С радостью отвечу на вопросы 🙂'
+          : 'Здравствуйте! Чем можем помочь? 🙂',
+      isMe: false,
+      time: DateTime.now(),
+    ),
+  ];
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToBottom() {
+    if (!_scrollController.hasClients) return;
+    _scrollController.animateTo(
+      _scrollController.position.maxScrollExtent + 80,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
+    );
+  }
+
+  void _send() {
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
+    setState(() {
+      _messages.add(
+        _MockChatMessage(text: text, isMe: true, time: DateTime.now()),
+      );
+    });
+    _controller.clear();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+
+    Future.delayed(const Duration(milliseconds: 700), () {
+      if (!mounted) return;
+      setState(() {
+        _messages.add(
+          _MockChatMessage(
+            text: 'Спасибо за сообщение! Скоро отвечу.',
+            isMe: false,
+            time: DateTime.now(),
+          ),
+        );
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = context.select((ThemeNotifier n) => n.isDarkMode);
+    final fg = isDark ? Colors.white : Colors.black;
+    final bubbleBg = isDark ? const Color(0xFF14181F) : const Color(0xFFF2F4F7);
+    final dividerColor =
+        (isDark ? Colors.white : Colors.black).withValues(alpha: 0.08);
+
+    return Scaffold(
+      backgroundColor: isDark ? Colors.black : Colors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(4.w, 4.h, 16.w, 8.h),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: Icon(Icons.arrow_back_ios_new, color: fg),
+                  ),
+                  SizedBox(
+                    width: 34.w,
+                    height: 34.w,
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/mock/mock_aibek.png',
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 10.w),
+                  Expanded(
+                    child: Text(
+                      'Aibek.Auto',
+                      style: TextStyle(
+                        color: fg,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Divider(height: 1, color: dividerColor),
+            Expanded(
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+                itemCount: _messages.length,
+                itemBuilder: (context, index) {
+                  final message = _messages[index];
+                  return Align(
+                    alignment: message.isMe
+                        ? Alignment.centerRight
+                        : Alignment.centerLeft,
+                    child: Container(
+                      margin: EdgeInsets.only(bottom: 10.h),
+                      constraints: BoxConstraints(maxWidth: 280.w),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 14.w,
+                        vertical: 10.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            message.isMe ? const Color(0xFF2F80ED) : bubbleBg,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Text(
+                        message.text,
+                        style: TextStyle(
+                          color: message.isMe ? Colors.white : fg,
+                          fontSize: 14,
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                12.w,
+                8.h,
+                12.w,
+                8.h + MediaQuery.viewInsetsOf(context).bottom,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      style: TextStyle(color: fg),
+                      onSubmitted: (_) => _send(),
+                      decoration: InputDecoration(
+                        hintText: 'Сообщение...',
+                        hintStyle: TextStyle(
+                          color: isDark ? Colors.white38 : Colors.black38,
+                        ),
+                        filled: true,
+                        fillColor: bubbleBg,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16.w,
+                          vertical: 12.h,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 8.w),
+                  Material(
+                    color: const Color(0xFF2F80ED),
+                    shape: const CircleBorder(),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: _send,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Icon(
+                          Icons.send,
+                          color: Colors.white,
+                          size: 20.sp,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _SectionTitle extends StatelessWidget {
   const _SectionTitle(this.title);
 
@@ -468,10 +734,12 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.select((ThemeNotifier n) => n.isDarkMode);
+
     return Text(
       title,
-      style: const TextStyle(
-        color: Colors.white,
+      style: TextStyle(
+        color: isDark ? Colors.white : Colors.black,
         fontSize: 18,
         fontWeight: FontWeight.w900,
       ),
@@ -517,21 +785,20 @@ class _BakAiLogo extends StatelessWidget {
 }
 
 class _FinanceTabs extends StatelessWidget {
-  const _FinanceTabs({
-    required this.selectedIndex,
-    required this.onChanged,
-  });
+  const _FinanceTabs({required this.selectedIndex, required this.onChanged});
 
   final int selectedIndex;
   final ValueChanged<int> onChanged;
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.select((ThemeNotifier n) => n.isDarkMode);
+    final unselected = isDark ? Colors.white70 : const Color(0xFF5F5F5F);
     const labels = ['Автофинансирование', 'Мурабаха'];
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: const Color(0xFF14181F),
+        color: isDark ? const Color(0xFF14181F) : const Color(0xFFF2F4F7),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
@@ -553,10 +820,10 @@ class _FinanceTabs extends StatelessWidget {
                 child: Text(
                   labels[index],
                   style: TextStyle(
-                      color:
-                          selected ? const Color(0xFF2F80ED) : Colors.white70,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 12),
+                    color: selected ? const Color(0xFF2F80ED) : unselected,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12,
+                  ),
                 ),
               ),
             ),
@@ -572,6 +839,9 @@ class _FinanceInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.select((ThemeNotifier n) => n.isDarkMode);
+    final fg = isDark ? Colors.white : Colors.black;
+    final sub = isDark ? Colors.white70 : const Color(0xFF5F5F5F);
     const items = [
       'Быстрое предварительное одобрение',
       'Первоначальный взнос от 30%',
@@ -583,9 +853,11 @@ class _FinanceInfoCard extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: const Color(0xFF14181F),
+        color: isDark ? const Color(0xFF14181F) : Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+        border: Border.all(
+          color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.07),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -609,10 +881,10 @@ class _FinanceInfoCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Финансирование автомобиля',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: fg,
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
                   ),
@@ -624,14 +896,17 @@ class _FinanceInfoCard extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.check,
-                            color: Color(0xFF2EB872), size: 18),
+                        const Icon(
+                          Icons.check,
+                          color: Color(0xFF2EB872),
+                          size: 18,
+                        ),
                         SizedBox(width: 8.w),
                         Expanded(
                           child: Text(
                             item,
-                            style: const TextStyle(
-                              color: Colors.white70,
+                            style: TextStyle(
+                              color: sub,
                               fontSize: 14,
                               height: 1.25,
                             ),
@@ -649,7 +924,7 @@ class _FinanceInfoCard extends StatelessWidget {
   }
 }
 
-class _FinanceCalculator extends StatelessWidget {
+class _FinanceCalculator extends StatefulWidget {
   const _FinanceCalculator({
     required this.price,
     required this.termMonths,
@@ -663,38 +938,60 @@ class _FinanceCalculator extends StatelessWidget {
   final ValueChanged<double> onTermChanged;
 
   @override
+  State<_FinanceCalculator> createState() => _FinanceCalculatorState();
+}
+
+class _FinanceCalculatorState extends State<_FinanceCalculator> {
+  bool _consentAccepted = false;
+
+  @override
   Widget build(BuildContext context) {
+    final price = widget.price;
+    final termMonths = widget.termMonths;
+    final monthlyPayment = widget.monthlyPayment;
+    final onTermChanged = widget.onTermChanged;
+    final isDark = context.select((ThemeNotifier n) => n.isDarkMode);
+    final fg = isDark ? Colors.white : Colors.black;
+    final sub = isDark ? Colors.white70 : const Color(0xFF5F5F5F);
+    final sub2 = isDark ? Colors.white54 : const Color(0xFF7A7A7A);
+    final editIconColor = isDark ? Colors.white60 : Colors.black45;
+    final fieldBg =
+        isDark ? Colors.black.withValues(alpha: 0.18) : const Color(0xFFF2F4F7);
+
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: const Color(0xFF14181F),
+        color: isDark ? const Color(0xFF14181F) : Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+        border: Border.all(
+          color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.07),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
               Expanded(
                 child: Text(
                   'Калькулятор',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: fg,
                     fontSize: 17,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
               ),
-              Icon(Icons.edit_outlined, color: Colors.white60, size: 18),
+              Icon(Icons.edit_outlined, color: editIconColor, size: 18),
             ],
           ),
           SizedBox(height: 14.h),
           Row(
             children: [
               Expanded(
-                  child: _CalculatorValue(label: 'Стоимость', value: price)),
+                child: _CalculatorValue(label: 'Стоимость', value: price),
+              ),
               const Expanded(
                 child: _CalculatorValue(
                   label: 'Первоначальный взнос',
@@ -707,15 +1004,15 @@ class _FinanceCalculator extends StatelessWidget {
           Container(
             padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.18),
+              color: fieldBg,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Ежемесячный платёж',
-                    style: TextStyle(color: Colors.white70),
+                    style: TextStyle(color: sub),
                   ),
                 ),
                 Text(
@@ -729,7 +1026,7 @@ class _FinanceCalculator extends StatelessWidget {
             ),
           ),
           SizedBox(height: 16.h),
-          const Text('Срок, месяцы', style: TextStyle(color: Colors.white54)),
+          Text('Срок, месяцы', style: TextStyle(color: sub2)),
           Slider(
             min: 12,
             max: 60,
@@ -738,28 +1035,101 @@ class _FinanceCalculator extends StatelessWidget {
             activeColor: const Color(0xFF2F80ED),
             onChanged: onTermChanged,
           ),
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('12 мес.', style: TextStyle(color: Colors.white54)),
-              Text('60 мес.', style: TextStyle(color: Colors.white54)),
+              Text('12 мес.', style: TextStyle(color: sub2)),
+              Text('60 мес.', style: TextStyle(color: sub2)),
             ],
           ),
-          SizedBox(height: 16.h),
-          Container(
-            width: double.infinity,
-            alignment: Alignment.center,
-            padding: EdgeInsets.symmetric(vertical: 15.h),
-            decoration: BoxDecoration(
-              color: const Color(0xFF2F80ED).withValues(alpha: 0.28),
-              borderRadius: BorderRadius.circular(14),
+          SizedBox(height: 18.h),
+          InkWell(
+            onTap: () => setState(() => _consentAccepted = !_consentAccepted),
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 24.w,
+                    height: 24.w,
+                    child: Checkbox(
+                      value: _consentAccepted,
+                      onChanged: (value) =>
+                          setState(() => _consentAccepted = value ?? false),
+                      activeColor: const Color(0xFF2F80ED),
+                      checkColor: Colors.white,
+                      side: BorderSide(
+                        color: _consentAccepted
+                            ? const Color(0xFF2F80ED)
+                            : (isDark
+                                ? Colors.white38
+                                : const Color(0xFF9AA4B2)),
+                        width: 1.5,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                  SizedBox(width: 10.w),
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(
+                        style:
+                            TextStyle(fontSize: 13, height: 1.35, color: sub),
+                        children: const [
+                          TextSpan(
+                            text: 'Я даю согласие на передачу и обработку ',
+                          ),
+                          TextSpan(
+                            text: 'персональных данных',
+                            style: TextStyle(
+                              color: Color(0xFF2F80ED),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: const Text(
-              'Подать заявку',
-              style: TextStyle(
-                color: Colors.white54,
-                fontWeight: FontWeight.w900,
-                fontSize: 16,
+          ),
+          SizedBox(height: 16.h),
+          SizedBox(
+            width: double.infinity,
+            height: 52.h,
+            child: ElevatedButton(
+              onPressed: _consentAccepted
+                  ? () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Заявка на автофинансирование'),
+                        ),
+                      );
+                    }
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2F80ED),
+                disabledBackgroundColor:
+                    const Color(0xFF2F80ED).withValues(alpha: 0.28),
+                foregroundColor: Colors.white,
+                disabledForegroundColor: const Color(0xFF2F80ED),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: const Text(
+                'Подать заявку',
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                ),
               ),
             ),
           ),
@@ -777,17 +1147,21 @@ class _CalculatorValue extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.select((ThemeNotifier n) => n.isDarkMode);
+    final sub2 = isDark ? Colors.white54 : const Color(0xFF7A7A7A);
+    final fg = isDark ? Colors.white : Colors.black;
+
     return Text.rich(
       TextSpan(
         children: [
           TextSpan(
             text: '$label\n',
-            style: const TextStyle(color: Colors.white54, fontSize: 12),
+            style: TextStyle(color: sub2, fontSize: 12),
           ),
           TextSpan(
             text: value,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: fg,
               fontSize: 14,
               height: 1.8,
               fontWeight: FontWeight.w800,
@@ -800,11 +1174,7 @@ class _CalculatorValue extends StatelessWidget {
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({
-    required this.label,
-    required this.value,
-    this.valueColor,
-  });
+  const _InfoRow({required this.label, required this.value, this.valueColor});
 
   final String label;
   final String value;
@@ -812,12 +1182,19 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.select((ThemeNotifier n) => n.isDarkMode);
+    final fg = isDark ? Colors.white : Colors.black;
+    final sub = isDark ? Colors.white70 : const Color(0xFF5F5F5F);
+
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(vertical: 13.h),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.18)),
+          bottom: BorderSide(
+            color:
+                (isDark ? Colors.white : Colors.black).withValues(alpha: 0.12),
+          ),
         ),
       ),
       child: Text.rich(
@@ -825,14 +1202,11 @@ class _InfoRow extends StatelessWidget {
           children: [
             TextSpan(
               text: '$label: ',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w900,
-              ),
+              style: TextStyle(color: fg, fontWeight: FontWeight.w900),
             ),
             TextSpan(
               text: value,
-              style: TextStyle(color: valueColor ?? Colors.white70),
+              style: TextStyle(color: valueColor ?? sub),
             ),
           ],
         ),
@@ -858,14 +1232,15 @@ class _SimilarListingsSection extends StatelessWidget {
       });
 
     if (others.isEmpty) return const SizedBox.shrink();
+    final isDark = context.select((ThemeNotifier n) => n.isDarkMode);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Похожие объявления',
           style: TextStyle(
-            color: Colors.white,
+            color: isDark ? Colors.white : Colors.black,
             fontSize: 18,
             fontWeight: FontWeight.w800,
           ),
@@ -893,6 +1268,8 @@ class _SimilarListingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.select((ThemeNotifier n) => n.isDarkMode);
+
     return GestureDetector(
       onTap: () {
         Navigator.of(context).push(
@@ -904,9 +1281,12 @@ class _SimilarListingCard extends StatelessWidget {
       child: Container(
         width: 150.w,
         decoration: BoxDecoration(
-          color: const Color(0xFF14181F),
+          color: isDark ? const Color(0xFF14181F) : Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+          border: Border.all(
+            color:
+                (isDark ? Colors.white : Colors.black).withValues(alpha: 0.07),
+          ),
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -925,8 +1305,8 @@ class _SimilarListingCard extends StatelessWidget {
                     listing.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black,
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       height: 1.2,

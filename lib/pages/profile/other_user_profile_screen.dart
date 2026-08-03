@@ -65,7 +65,7 @@ class _OtherUserProfileState extends State<OtherUserProfile> {
       description:
           'Автосалон «Aibek.Auto» — большой выбор автомобилей на любой вкус и бюджет!',
       userType: 'auto_salon',
-      image: 'assets/sedan.png',
+      image: 'assets/mock/mock_aibek.png',
       is_verified: true,
       is_active: true,
       rating: 5,
@@ -199,9 +199,10 @@ class _OtherUserProfileState extends State<OtherUserProfile> {
               passive: true,
             ),
             title: '',
-            // Block/report need an account — hide the actions menu for guests
-            // and on the own profile.
-            action: (isSelfProfile || !isRegister)
+            // Block/report need an account — hide the actions menu for guests,
+            // on the own profile, and on the mock Aibek.Auto salon (nothing
+            // real to block/report there).
+            action: (isSelfProfile || !isRegister || _isMockOwner)
                 ? null
                 : [
                     IconButton(
@@ -267,6 +268,7 @@ class _OtherUserProfileState extends State<OtherUserProfile> {
                             currentUser: bloc,
                             isCurrentUser: isCurrentUser2,
                             postCounts: postCounts,
+                            showInlineMenu: !_isMockOwner,
                           );
                         }
                       },

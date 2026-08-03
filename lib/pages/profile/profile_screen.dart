@@ -1701,7 +1701,7 @@ class _MockSellerCard extends StatelessWidget {
           const CircleAvatar(
             radius: 24,
             backgroundColor: Colors.black,
-            backgroundImage: AssetImage('assets/sedan.png'),
+            backgroundImage: AssetImage('assets/mock/mock_aibek.png'),
           ),
           SizedBox(width: 12.w),
           const Expanded(

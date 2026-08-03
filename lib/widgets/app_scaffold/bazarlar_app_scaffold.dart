@@ -192,7 +192,7 @@ class _BrandTitle extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            fontSize: 24.sp,
+            fontSize: 18.sp,
             fontWeight: FontWeight.w800,
             letterSpacing: -0.5,
             height: 1.05,

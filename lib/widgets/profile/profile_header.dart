@@ -19,6 +19,7 @@ import 'package:optombai/bloc/chat_bloc/chat_bloc.dart';
 // STORE_RELEASE_HIDDEN: import 'package:optombai/bloc/feature_flags_cubit/gate/feature_flag_gate.dart';
 import 'package:optombai/data/models/account/user/socials/social_owner.dart';
 import 'package:optombai/data/models/account/user/socials/social_type.dart';
+import 'package:optombai/pages/main_screen/sedan_mock_details_page.dart';
 import 'package:optombai/utils/extensions/social_type_icon_extension.dart';
 import 'package:optombai/widgets/utils/smart_asset_image.dart';
 
@@ -292,7 +293,7 @@ class _ProfileHeaderState extends State<ProfileHeader> {
         _ProfileAvatarRing(
           imageUrl: user.image,
           fallbackAsset:
-              user.userType == 'auto_salon' ? 'assets/sedan.png' : null,
+              user.userType == 'auto_salon' ? 'assets/mock_aibek.png' : null,
         ),
         SizedBox(width: 14.w),
         Expanded(
@@ -626,26 +627,14 @@ class _ProfileHeaderState extends State<ProfileHeader> {
   }
 
   // DEMO MODE
-  void _showComingSoon(BuildContext context, String message) {
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(
-        SnackBar(
-          content: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.auto_awesome, color: Colors.white, size: 18),
-              const SizedBox(width: 8),
-              Expanded(child: Text(message)),
-            ],
-          ),
-          backgroundColor: _purple,
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.all(12),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
+  static const _mockPhone = '0551947777';
+
+  void _openMockChat(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const SedanMockChatScreen(),
+      ),
+    );
   }
 
   Widget _contactCards(BuildContext context, bool isDark) {
@@ -665,8 +654,7 @@ class _ProfileHeaderState extends State<ProfileHeader> {
         title: 'Написать\nв WhatsApp',
         subtitle: 'Быстрый ответ',
         onTap: isMockUser
-            ? () => _showComingSoon(
-                context, 'WhatsApp будет доступен в ближайшее время')
+            ? () => _launchUrlSafe('https://wa.me/+996551947777')
             : () =>
                 _launchUrlSafe(whatsapp!.socialType.domainUrl + whatsapp.link),
       ));
@@ -680,7 +668,9 @@ class _ProfileHeaderState extends State<ProfileHeader> {
         iconBg: _purple.withValues(alpha: 0.12),
         title: 'Написать\nв чат',
         subtitle: 'Ответим здесь',
-        onTap: () => _openChat(context),
+        onTap: isMockUser
+            ? () => _openMockChat(context)
+            : () => _openChat(context),
       ));
     }
 
@@ -693,8 +683,7 @@ class _ProfileHeaderState extends State<ProfileHeader> {
         title: 'Позвонить',
         subtitle: 'Связаться\nпо телефону',
         onTap: isMockUser
-            ? () => _showComingSoon(
-                context, 'Звонок будет доступен в ближайшее время')
+            ? () => _launchPhoneNumber(_mockPhone)
             : () => _launchPhoneNumber(widget.currentUser.phone_number),
       ));
     }
