@@ -19,6 +19,7 @@ import 'package:optombai/utils/extensions/video_url_extension.dart';
 import 'package:optombai/pages/profile/edit/widgets/video_view_screen.dart';
 import 'package:optombai/widgets/bottom_nav.dart';
 import 'package:optombai/widgets/translation/text_translated.dart';
+import 'package:optombai/widgets/utils/smart_asset_image.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:optombai/app/router/app_router.dart';
 
@@ -803,7 +804,7 @@ class _OwnerInfoRow extends StatelessWidget {
           child: CircleAvatar(
             backgroundColor: const Color(0xffF0F0F0),
             backgroundImage: results.owner?.image != null
-                ? CachedNetworkImageProvider(results.owner!.image)
+                ? SmartImage.provider(results.owner!.image)
                 : null,
             child: results.owner?.image == null
                 ? CustomAvatar(
@@ -824,20 +825,25 @@ class _OwnerInfoRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                results.owner?.username ?? "Unknown",
-                softWrap: true,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 18,
-                ),
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      results.owner?.username ?? "Unknown",
+                      softWrap: true,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ),
+                  if (results.owner?.is_verified ?? false) ...[
+                    SizedBox(width: 4.w),
+                    const Icon(Icons.verified, color: Colors.green, size: 16),
+                  ],
+                ],
               ),
-              if (results.owner?.is_verified ?? false)
-                const Icon(
-                  Icons.verified,
-                  color: Colors.green,
-                ),
               TextTranslated(
                 "Рейтинг : ${results.rating}",
                 style: const TextStyle(

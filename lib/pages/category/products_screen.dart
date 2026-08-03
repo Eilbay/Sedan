@@ -61,6 +61,7 @@ class ProductsScreen extends StatelessWidget {
       final isDarkMode = context.select((ThemeNotifier n) => n.isDarkMode);
       return _MockListingScaffold(
         title: title,
+        childId: childId,
         listing: mock,
         isDarkMode: isDarkMode,
       );
@@ -627,6 +628,7 @@ class _ProductsViewState extends State<_ProductsView> {
     if (mock != null) {
       return _MockListingScaffold(
         title: widget.title,
+        childId: widget.childId,
         listing: mock,
         isDarkMode: isDarkMode,
       );
@@ -697,11 +699,13 @@ class _ProductsViewState extends State<_ProductsView> {
 class _MockListingScaffold extends StatefulWidget {
   const _MockListingScaffold({
     required this.title,
+    required this.childId,
     required this.listing,
     required this.isDarkMode,
   });
 
   final String title;
+  final String childId;
   final SedanMockListing listing;
   final bool isDarkMode;
 
@@ -713,6 +717,44 @@ class _MockListingScaffoldState extends State<_MockListingScaffold> {
   String _search = '';
   bool _isSaved = false;
   bool _isGridLayout = true;
+
+  static const List<SortModel> _sortOptions = [
+    SortModel("Не указaно", null),
+    SortModel("Сначала дешевле", "price"),
+    SortModel("Сначала дороже", "-price"),
+    SortModel("Сначала новые", "created_at"),
+    SortModel("Выше рейтинг", "-rating"),
+  ];
+
+  Future<void> _openFilterSheet() async {
+    final categories = context.read<CategoryBloc>().state.categories;
+
+    final result = await ProductFilterSheet.show(
+      context,
+      config: ProductFilterConfig(
+        search: _search.isEmpty ? null : _search,
+        filterCategoryId: widget.childId,
+        filterCategoryTitle: widget.title,
+      ),
+      categoryTitle: widget.title,
+      sortOptions: _sortOptions,
+      categories: categories,
+      totalCount: 1,
+    );
+
+    if (!mounted || result == null) return;
+
+    final pickedCategoryId = result.filterCategoryId;
+    if (pickedCategoryId != null && pickedCategoryId != widget.childId) {
+      context.router.replace(ProductsRoute(
+        childId: pickedCategoryId,
+        title: result.filterCategoryTitle ?? widget.title,
+      ));
+      return;
+    }
+
+    setState(() => _search = result.search ?? '');
+  }
 
   bool get _matchesSearch {
     final query = _search.trim().toLowerCase();
@@ -754,7 +796,7 @@ class _MockListingScaffoldState extends State<_MockListingScaffold> {
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: FilledButton(
-              onPressed: () {},
+              onPressed: _openFilterSheet,
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF007AFF),
                 shape: RoundedRectangleBorder(
