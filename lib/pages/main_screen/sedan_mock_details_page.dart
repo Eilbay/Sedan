@@ -201,13 +201,13 @@ class _TopBar extends StatelessWidget {
           SizedBox(width: 8.w),
           Expanded(
             child: Text(
-              listing.title.toUpperCase(),
+              listing.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: fg,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -669,12 +669,7 @@ class _SedanMockChatScreenState extends State<SedanMockChatScreen> {
               ),
             ),
             Padding(
-              padding: EdgeInsets.fromLTRB(
-                12.w,
-                8.h,
-                12.w,
-                8.h + MediaQuery.viewInsetsOf(context).bottom,
-              ),
+              padding: EdgeInsets.fromLTRB(12.w, 8.h, 12.w, 8.h),
               child: Row(
                 children: [
                   Expanded(

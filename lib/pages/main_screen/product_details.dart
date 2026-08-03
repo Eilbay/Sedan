@@ -286,9 +286,12 @@ class _PriceViewsRow extends StatelessWidget {
   final int views;
   final bool isDarkMode;
 
+  final double? priceKgsOverride;
+
   const _PriceViewsRow({
     required this.price,
     required this.currency,
+    this.priceKgsOverride,
     required this.views,
     required this.isDarkMode,
   });
@@ -318,24 +321,51 @@ class _PriceViewsRow extends StatelessWidget {
         hasPrice ? '${_formatNum(price!)} $currencyLabel' : 'Договорная';
 
     final Color sub = isDarkMode ? Colors.white70 : const Color(0xFF5F5F5F);
+    final Color fg = isDarkMode ? Colors.white : Colors.black;
 
     return Row(
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-          decoration: BoxDecoration(
-            color: _accent,
-            borderRadius: BorderRadius.circular(10),
+        if (hasPrice && priceKgsOverride != null) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(
+              color: _accent,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              '${_formatNum(priceKgsOverride!)} сом',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
-          child: Text(
+          const SizedBox(width: 8),
+          Text(
             priceText,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: fg,
               fontSize: 15,
               fontWeight: FontWeight.w700,
             ),
           ),
-        ),
+        ] else
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(
+              color: _accent,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              priceText,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
         const Spacer(),
         Icon(Icons.remove_red_eye_outlined, size: 18, color: sub),
         const SizedBox(width: 5),

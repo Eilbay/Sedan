@@ -5,6 +5,7 @@ import 'package:optombai/bloc/chat_bloc/chat_bloc.dart';
 import 'package:optombai/bloc/support_bloc/support_bloc.dart';
 import 'package:optombai/bloc/support_bloc/support_event.dart';
 import 'package:optombai/bloc/user_bloc/user_bloc.dart';
+import 'package:optombai/pages/main_screen/sedan_mock_details_page.dart';
 import 'package:optombai/widgets/auth/inline_sign_in.dart';
 import 'package:optombai/widgets/chat/chat_card.dart';
 import 'package:optombai/widgets/shimmer/shimmer_list_tile.dart';
@@ -231,21 +232,7 @@ class _ChatListScreenState extends State<ChatListScreen>
             }
 
             if (chatState.chats.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.chat_bubble_outline,
-                        size: 64, color: Colors.grey.shade400),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Нет чатов',
-                      style:
-                          TextStyle(fontSize: 16, color: Colors.grey.shade600),
-                    ),
-                  ],
-                ),
-              );
+              return const _MockChatListTile();
             }
 
             final supportChatId =
@@ -261,9 +248,13 @@ class _ChatListScreenState extends State<ChatListScreen>
               },
               child: ListView.builder(
                 controller: _scrollController,
-                itemCount: chatState.chats.length +
+                itemCount: 1 +
+                    chatState.chats.length +
                     (chatState.isLoadingPaginate ? 1 : 0),
                 itemBuilder: (context, index) {
+                  if (index == 0) return const _MockChatListTile();
+                  index -= 1;
+
                   if (index == chatState.chats.length) {
                     return const Center(
                       child: Padding(
@@ -303,6 +294,54 @@ class _ChatListScreenState extends State<ChatListScreen>
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+/// DEMO MODE
+class _MockChatListTile extends StatelessWidget {
+  const _MockChatListTile();
+
+  void _open(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const SedanMockChatScreen(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = context.select((ThemeNotifier n) => n.isDarkMode);
+
+    return ListTile(
+      onTap: () => _open(context),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+      leading: const CircleAvatar(
+        radius: 26,
+        backgroundColor: Colors.black,
+        backgroundImage: AssetImage('assets/mock/mock_aibek.png'),
+      ),
+      title: Text(
+        'Aibek.Auto',
+        style: TextStyle(
+          color: isDark ? Colors.white70 : Colors.black87,
+          fontWeight: FontWeight.w500,
+          fontSize: 15,
+        ),
+      ),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Text(
+          'Здравствуйте! Чем можем помочь? 🙂',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: isDark ? Colors.white60 : Colors.grey,
+            fontSize: 14,
+          ),
         ),
       ),
     );
